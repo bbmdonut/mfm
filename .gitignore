@@ -48,3 +48,7 @@ mfm/mfm_write
 mfm/find_crc_info
 powerfail/powerfail
 mfm/ext2emu
+
+# Build directories and generated files
+build/
+compile_commands.json

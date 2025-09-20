@@ -13,34 +13,48 @@ add_project_arguments([
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : true)
-rt_dep = cc.find_library('rt', required: false)
-liberty_dep = cc.find_library('libiberty', required: true)
+rt_dep = cc.find_library('rt', required : true)
 thread_dep = dependency('threads')
- 
-add_project_arguments('-I/usr/include/libiberty', language: 'c')
+pru_dep = dependency('prussdrv', required : false)
 
-dependencies = [
+# libiberty doesn't have a pkg-config file so we can't descover it like some other libs 
+liberty_dep = cc.find_library('iberty', required: false)
+foreach liberty : ['liberty', 'bfd']
+  if not liberty_dep.found()
+    liberty_dep = cc.find_library(liberty, required: false)
+  endif
+endforeach
+
+
+base_dependencies = [
   thread_dep,
   m_dep,
   liberty_dep,
   rt_dep
 ]
 
+full_dependencies = base_dependencies
+if liberty_dep.found()
+  full_dependencies += liberty_dep
+  liberty_include = include_directories('/usr/include/libiberty')
+endif
+
+
 subdir('mfm')
 
 util_exe = executable(
   'mfm_util',
   mfm_utils_src,
-  dependencies : dependencies,
-  include_directories: mfm_include,
+  dependencies : base_dependencies,
+  include_directories: [mfm_include, liberty_include],
   install : false,
 )
 
 ext2emu_exe = executable(
   'ext2emu',
   mfm_utils_src,
-  dependencies : dependencies,
-  include_directories: mfm_include,
+  dependencies : base_dependencies,
+  include_directories: [mfm_include, liberty_include],
   install : false,
 )
 
@@ -56,8 +70,8 @@ ext2emu_exe = executable(
 find_crc_info_exe = executable(
   'find_crc_info',
   find_crc_info_src,
-  dependencies : dependencies,
-  include_directories: mfm_include,
+  dependencies : full_dependencies,
+  include_directories: [mfm_include, liberty_include],
   install : false,
 )
 
