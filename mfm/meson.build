@@ -16,8 +16,8 @@ mfm_sources_1 = files(
   'pru_setup.c',
   'tagged_mfm_decoder.c',
   'wd_mfm_decoder.c',
-  'xebec_mfm_decoder.c', 
-  )
+  'xebec_mfm_decoder.c',
+)
 
 mfm_utils_src = files(
   'analyze.c',
@@ -34,8 +34,8 @@ mfm_utils_src = files(
   'perq_mfm_decoder.c',
   'tagged_mfm_decoder.c',
   'wd_mfm_decoder.c',
-  'xebec_mfm_decoder.c'
-  )
+  'xebec_mfm_decoder.c',
+)
 
 mfm_sources_3 = files(
   'board.c',
@@ -47,7 +47,7 @@ mfm_sources_3 = files(
   'msg.c',
   'parse_cmdline_write.c',
   'pru_setup.c',
-  )
+)
 
 find_crc_info_src = files('find_crc_info.cpp')
 
