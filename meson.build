@@ -18,7 +18,9 @@ cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required: true)
 rt_dep = cc.find_library('rt', required: true)
 thread_dep = dependency('threads')
-pru_dep = dependency('prussdrv', required: false)
+
+libprussdrv_proj = subproject('am335_pru')
+libprussdrv_dep = libprussdrv_proj.get_variable('libprussdrv_dep')
 
 # libiberty doesn't have a pkg-config file so we can't descover it like some other libs
 liberty_dep = cc.find_library('iberty', required: false)
@@ -43,7 +45,7 @@ util_exe = executable(
   mfm_utils_src,
   dependencies: base_dependencies,
   include_directories: [mfm_include, liberty_include],
-  install: false,
+  install: true,
 )
 
 ext2emu_exe = executable(
@@ -51,22 +53,30 @@ ext2emu_exe = executable(
   mfm_utils_src,
   dependencies: base_dependencies,
   include_directories: [mfm_include, liberty_include],
-  install: false,
+  install: true,
 )
 
-# fails because we don't have prussdrive.h
-# mfm_write_exe = executable(
-#   'mfm_write',
-#   mfm_sources_3,
-#   dependencies : dependencies,
-#   include_directories: mfm_include,
-#   install : false,
-# )
+mfm_write_exe = executable(
+  'mfm_write',
+  mfm_sources_3,
+  dependencies : [ base_dependencies, libprussdrv_dep ],
+  include_directories: mfm_include,
+  install : true,
+)
 
 find_crc_info_exe = executable(
   'find_crc_info',
   find_crc_info_src,
   dependencies: full_dependencies,
   include_directories: [mfm_include, liberty_include],
-  install: false,
+  install: true,
 )
+
+#subdir('emu')
+#emu = executable(
+#  'mfm_emu',
+#  mfm_emu_sources + emu_sources,
+#  dependencies : [ base_dependencies, libprussdrv_dep ],
+#  include_directories: [emu_include, mfm_include],
+#  install: true,
+#)

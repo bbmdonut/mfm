@@ -1,0 +1,3 @@
+[submodule "subprojects/am335_pru"]
+	path = subprojects/am335_pru
+	url = git@github.com:JamesMConroy/am335x_pru_package.git
