@@ -36,7 +36,7 @@
 #include <getopt.h>
 #include <stdarg.h>
 #include <stdio.h>
-
+#include <strings.h>
 
 #include "msg.h"
 #include "emu_tran_file.h"

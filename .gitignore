@@ -52,3 +52,7 @@ mfm/ext2emu
 # Build directories and generated files
 build/
 compile_commands.json
+
+# Meson subproject downloads
+subprojects/packagecache/
+subprojects/Unity-*/

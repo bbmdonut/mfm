@@ -72,11 +72,9 @@ find_crc_info_exe = executable(
   install: true,
 )
 
-#subdir('emu')
-#emu = executable(
-#  'mfm_emu',
-#  mfm_emu_sources + emu_sources,
-#  dependencies : [ base_dependencies, libprussdrv_dep ],
-#  include_directories: [emu_include, mfm_include],
-#  install: true,
-#)
+subdir('emu')
+
+# Tests
+if get_option('tests')
+  subdir('tests')
+endif
