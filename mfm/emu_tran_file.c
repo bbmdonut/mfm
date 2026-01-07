@@ -8,7 +8,7 @@
 //    defined below.  (generally "delta" is internal and "transition"
 //    external, but this is not guaranteed consistent.)
 //
-// Call emu_file_read_track_deltas to read next track of data and convert to 
+// Call emu_file_read_track_deltas to read next track of data and convert to
 //    delta format.
 // Call emu_file_write_header to open file for writing and write out
 //    header data. File will be created or truncated.
@@ -25,17 +25,17 @@
 // Call tran_file_read_header to open file for reading.
 // Call tran_file_write_header to open file for writing and write out
 //    header data. File will be created or truncated.
-// Call tran_file_read_track_deltas to read next track of data and convert to 
+// Call tran_file_read_track_deltas to read next track of data and convert to
 //    delta format.
-// Call tran_file_write_track_deltas to write next track of data, converting  
+// Call tran_file_write_track_deltas to write next track of data, converting
 //    from delta format.
 // Call tran_file_seek_track to seek to desired cylinder and head
 //
 // Delta format is count of clocks between ones in 200 MHz clocks.
 //
-// All files are read and written little endian. 
-// File version word 
-//    Upper 8 bits the file type. 
+// All files are read and written little endian.
+// File version word
+//    Upper 8 bits the file type.
 //       1 = transition, 2 = emulation.
 //    Next 8 bits major version. This field will be increased if file format
 //       is changed incompatible with old programs.
@@ -48,7 +48,7 @@
 // Emulator file header format. See code for which fields are present
 //    in which file version.
 //    uint8_t[8] File id string 0xee 0x4d 0x46 0x4d 0x0d 0x0a 0x1a 0x00
-//    uint32_t File type and version. Current 0x02020200. 
+//    uint32_t File type and version. Current 0x02020200.
 //    uint32_t Offset to start of first track header in bytes.
 //    uint32_t Size of the data portion of each track in bytes.
 //    uint32_t Size of the header portion of each track in bytes.
@@ -88,12 +88,12 @@
 //       this program suite. Polynomial 0x140a0445 length 32 initial value
 //       0xffffffff.
 //
-// Transition file track header format 
+// Transition file track header format
 //    int32_t Cylinder number of track
 //    int32_t Head number of track
 //    uint32_t Number of bytes of transition data
-//    uint32_t Checksum of header and track data. Calculated over bytes 
-//    using crc64 in this program suite. Polynomial 0x140a0445 length 
+//    uint32_t Checksum of header and track data. Calculated over bytes
+//    using crc64 in this program suite. Polynomial 0x140a0445 length
 //       32 initial value 0xffffffff.
 //    Cylinder and head of -1 indicate no more data.
 //
@@ -119,7 +119,7 @@
 //    emulator track file length to be set.
 //    Added start_time_ns to transition file header and incremented file
 //    version.
-// 10/19/14 DJG Added and modified functions to allow emulator file writes to 
+// 10/19/14 DJG Added and modified functions to allow emulator file writes to
 // 	be buffered
 //
 // Copyright 2013 David Gesswein.
@@ -164,7 +164,7 @@
 // EMU track header marker
 #define TRACK_ID_VALUE 0x12345678
 // File header marker
-uint8_t expected_header_id[] = 
+uint8_t expected_header_id[] =
    { 0xee, 0x4d, 0x46, 0x4d, 0x0d, 0x0a, 0x1a, 0x00};
 // File type 2, major version 1, minor version 2
 #define EMU_FILE_VERSION 0x02020200
@@ -209,10 +209,10 @@ static void emu_file_read(int fd, void *bytes, int len) {
 // fd: File descriptor to read from
 // seek_cyl: Cylinder number to find
 // seek_head: head number to find
-int emu_file_seek_track(int fd, int seek_cyl, int seek_head, 
+int emu_file_seek_track(int fd, int seek_cyl, int seek_head,
       EMU_FILE_INFO *emu_file_info) {
    off_t offset;
-   int track_size = (emu_file_info->track_data_size_bytes + 
+   int track_size = (emu_file_info->track_data_size_bytes +
           emu_file_info->track_header_size_bytes);
 
    // If called with invalid head or cylinder return error
@@ -221,11 +221,11 @@ int emu_file_seek_track(int fd, int seek_cyl, int seek_head,
       return 1;
    }
 
-   offset = (off_t) seek_cyl * track_size * emu_file_info->num_head + 
+   offset = (off_t) seek_cyl * track_size * emu_file_info->num_head +
       seek_head * track_size + emu_file_info->file_header_size_bytes;
 
    if (lseek(fd, offset , SEEK_SET) == -1) {
-      msg(MSG_FATAL, "Failed to seek in emulation file %s\n", 
+      msg(MSG_FATAL, "Failed to seek in emulation file %s\n",
             strerror(errno));
       exit(1);
    }
@@ -235,7 +235,7 @@ int emu_file_seek_track(int fd, int seek_cyl, int seek_head,
 }
 
 // This calls bit read routine and then converts the bits into deltas.
-// The deltas are returned assuming 200 MHz PRU sample clock for delta time. 
+// The deltas are returned assuming 200 MHz PRU sample clock for delta time.
 //
 // fd: File descriptor to read from
 // emu_file_info: Information on emulator file format
@@ -300,7 +300,7 @@ int emu_file_read_track_deltas(int fd, EMU_FILE_INFO *emu_file_info,
 // track_bytes: The size of each track data in bytes
 // return: file descriptor of file opened
 int  emu_file_write_header(char *fn, int num_cyl, int num_head, char *cmdline,
-      char *note, uint32_t sample_rate_hz, uint32_t start_time_ns, 
+      char *note, uint32_t sample_rate_hz, uint32_t start_time_ns,
       uint32_t track_bytes) {
    uint32_t value;
    int fd;
@@ -325,7 +325,7 @@ int  emu_file_write_header(char *fn, int num_cyl, int num_head, char *cmdline,
    value = EMU_FILE_VERSION;
    emu_file_write(fd, &value, sizeof(value));
    // Offset of first track header
-   value = sizeof(expected_header_id) + 4*10 + strlen(cmdline)+1 + 
+   value = sizeof(expected_header_id) + 4*10 + strlen(cmdline)+1 +
        strlen(lcl_note)+1;
    track_start = value;
    emu_file_write(fd, &value, sizeof(value));
@@ -390,7 +390,7 @@ int emu_file_read_header(char *fn, EMU_FILE_INFO *emu_file_info,
       fd = open(fn, O_RDONLY);
    }
    if (fd < 0) {
-      msg(MSG_FATAL, "Failed to open emulation file %s: %s\n", 
+      msg(MSG_FATAL, "Failed to open emulation file %s: %s\n",
             fn, strerror(errno));
       exit(1);
    }
@@ -426,7 +426,7 @@ int emu_file_read_header(char *fn, EMU_FILE_INFO *emu_file_info,
    emu_file_info->note = NULL;
    if ((emu_file_info->version & 0xffff0000) >= 0x02020000) {
       emu_file_read(fd, &value, sizeof(value));
-      emu_file_info->decode_cmdline = msg_malloc(value, 
+      emu_file_info->decode_cmdline = msg_malloc(value,
          "emu_file_read decode_cmdline");
       emu_file_read(fd, emu_file_info->decode_cmdline, value);
 
@@ -439,8 +439,8 @@ int emu_file_read_header(char *fn, EMU_FILE_INFO *emu_file_info,
       emu_file_read(fd, &value, sizeof(value));
       emu_file_info->start_time_ns = value;
    }
-   // If more data in header ignore it. This allows 
-   // minor revisions to add additional fields and old programs still 
+   // If more data in header ignore it. This allows
+   // minor revisions to add additional fields and old programs still
    // can process
    header_left = emu_file_info->file_header_size_bytes - lseek(fd, 0, SEEK_CUR);
    if (header_left > 0) {
@@ -461,8 +461,8 @@ int emu_file_read_header(char *fn, EMU_FILE_INFO *emu_file_info,
 // cyl: Cylinder of track. Pass -1 to write end of file marker
 // head: Head/track number
 // track_bytes: The size of each track data in bytes.
-void emu_file_write_track_bits(int fd, uint32_t *words, int num_words, 
-   int cyl, int head, uint32_t track_bytes) 
+void emu_file_write_track_bits(int fd, uint32_t *words, int num_words,
+   int cyl, int head, uint32_t track_bytes)
 {
    uint32_t value;
    int i;
@@ -535,7 +535,7 @@ void emu_file_rewrite_track(int fd, EMU_FILE_INFO *emu_file_info,
 // emu_file_info: Information on emulator file format
 // words: Words to write
 // num_words: Size of words buffer in words
-// cyl: Returns cylinder of track read. 
+// cyl: Returns cylinder of track read.
 // head: Returns Head/track number
 // return: number of words of track data read if OK, -1 if end of file found
 int emu_file_read_track_bits(int fd, EMU_FILE_INFO *emu_file_info,
@@ -545,7 +545,7 @@ int emu_file_read_track_bits(int fd, EMU_FILE_INFO *emu_file_info,
 
    emu_file_read(fd, &value, sizeof(value));
    if (value != TRACK_ID_VALUE) {
-      msg(MSG_FATAL, "Emulation file track id value mismatch %x %x\n", 
+      msg(MSG_FATAL, "Emulation file track id value mismatch %x %x\n",
          value, TRACK_ID_VALUE);
       exit(1);
    }
@@ -695,7 +695,7 @@ int tran_file_read_header(char *fn, TRAN_FILE_INFO *tran_file_info)
 
    fd = open(fn, O_RDONLY);
    if (fd < 0) {
-      msg(MSG_FATAL, "Failed to open transition file %s: %s\n", 
+      msg(MSG_FATAL, "Failed to open transition file %s: %s\n",
             fn, strerror(errno));
       exit(1);
    }
@@ -729,7 +729,7 @@ int tran_file_read_header(char *fn, TRAN_FILE_INFO *tran_file_info)
       exit(1);
    }
    tran_file_read(fd, &value, sizeof(value), &poly);
-   tran_file_info->decode_cmdline = msg_malloc(value, 
+   tran_file_info->decode_cmdline = msg_malloc(value,
       "tran_file_read decode_cmdline");
    tran_file_read(fd, tran_file_info->decode_cmdline, value, &poly);
 
@@ -745,8 +745,8 @@ int tran_file_read_header(char *fn, TRAN_FILE_INFO *tran_file_info)
       tran_file_read(fd, &value, sizeof(value), &poly);
       tran_file_info->start_time_ns = value;
    }
-   // If more data than 4 byte checksum in header ignore it. This allows 
-   // minor revisions to add additional fields and old programs still 
+   // If more data than 4 byte checksum in header ignore it. This allows
+   // minor revisions to add additional fields and old programs still
    // can process
    header_left = tran_file_info->file_header_size_bytes - lseek(fd, 0, SEEK_CUR);
    if (header_left > 4) {
@@ -797,7 +797,7 @@ int tran_file_write_header(char *fn, int num_cyl, int num_head,
    value = TRAN_FILE_VERSION;
    tran_file_write(fd, &value, sizeof(value), &poly);
    // Offset of first track header
-   value = sizeof(expected_header_id) + 4*10 + strlen(cmdline)+1 + 
+   value = sizeof(expected_header_id) + 4*10 + strlen(cmdline)+1 +
       strlen(lcl_note)+1;
    track_start = value;
    tran_file_write(fd, &value, sizeof(value), &poly);
@@ -844,7 +844,7 @@ int tran_file_write_header(char *fn, int num_cyl, int num_head,
 // seek_head: head number to find
 // tran_file_info: Information on transition file
 // return: 0 if track found else 1
-int tran_file_seek_track(int fd, int seek_cyl, int seek_head, 
+int tran_file_seek_track(int fd, int seek_cyl, int seek_head,
      TRAN_FILE_INFO *tran_file_info) {
    int done = 0;
    uint32_t cyl, head;
@@ -891,7 +891,7 @@ int tran_file_seek_track(int fd, int seek_cyl, int seek_head,
 // cyl: Cylinder number of track read
 // head: head number of track read
 // return: Number of deltas read in words. -1 if end of file found.
-int tran_file_read_track_deltas(int fd, uint16_t deltas[], int max_deltas, 
+int tran_file_read_track_deltas(int fd, uint16_t deltas[], int max_deltas,
     int *cyl, int *head)
 {
    uint8_t deltas_in[MAX_BYTE_DELTAS];
@@ -921,7 +921,7 @@ int tran_file_read_track_deltas(int fd, uint16_t deltas[], int max_deltas,
       i = 0;
       while (i < num_bytes) {
          if (deltas_in[i] == 255) {
-            value = deltas_in[i+1] | ((uint32_t) deltas_in[i+2] << 8) | 
+            value = deltas_in[i+1] | ((uint32_t) deltas_in[i+2] << 8) |
                ((uint32_t) deltas_in[i+3] << 16);
             i += 4;
          } else if (deltas_in[i] == 254) {
@@ -931,7 +931,7 @@ int tran_file_read_track_deltas(int fd, uint16_t deltas[], int max_deltas,
             value = deltas_in[i++];
          }
          if (deltas_ndx >= max_deltas) {
-            msg(MSG_FATAL, "Transition file deltas overflow %d %d\n", 
+            msg(MSG_FATAL, "Transition file deltas overflow %d %d\n",
                 deltas_ndx, max_deltas);
             exit(1);
          }
@@ -1033,7 +1033,7 @@ float emu_rps(int sample_rate_hz) {
      // 3125 RPM for Shugart. Quantum Q20x0 is 3000. No easy way to tell
      // which. Will need to manually specify --track_words 5425 when
      // creating emulation file for Quantum drive.
-     return 52.0833; 
+     return 52.0833;
    } else {
      return 60.0;
    }

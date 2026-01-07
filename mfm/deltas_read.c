@@ -1,5 +1,5 @@
-// This module is for reading deltas (MFM bit transition delta times) from the 
-// PRU and optionally writing them to a file. The deltas are also available 
+// This module is for reading deltas (MFM bit transition delta times) from the
+// PRU and optionally writing them to a file. The deltas are also available
 // through the pointer returned by deltas setup. The deltas are 16 bit unsigned
 // values with each word the time difference between the current rising edge and
 // the previous rising edge of the MFM data signal in 200 MHz clock
@@ -143,7 +143,7 @@ static void write_deltas(int fd, uint16_t deltas[], int num_deltas) {
    tran_file_write_track_deltas(fd, deltas, num_deltas, deltas_cyl, deltas_head);
 }
 
-// This is the thread for processing deltas. 
+// This is the thread for processing deltas.
 // We read a tracks worth of delta from PRU into global deltas then
 // wait for semaphore to repeat. If global thread_state is
 // THREAD_SHUTDOWN then we exit.
@@ -167,7 +167,7 @@ static void *delta_proc(void *arg)
       drive_params->tran_fd = tran_file_write_header(
             drive_params->transitions_filename,
             drive_params->num_cyl, drive_params->num_head,
-            drive_params->cmdline, drive_params->note, 
+            drive_params->cmdline, drive_params->note,
             drive_params->start_time_ns);
    }
 
@@ -182,7 +182,7 @@ static void *delta_proc(void *arg)
             break;
       }
       num_bytes = pru_read_word(MEM_PRU0_DATA, PRU0_WRITE_PTR) -
-         track_deltas * sizeof(deltas[0]); 
+         track_deltas * sizeof(deltas[0]);
       pru_read_mem(MEM_DDR, &deltas[track_deltas],
             num_bytes, track_deltas * sizeof(deltas[0]));
       track_deltas += num_bytes / sizeof(deltas[0]);
@@ -194,7 +194,7 @@ static void *delta_proc(void *arg)
          if (pru_get_cmd_status() != CMD_STATUS_READ_STARTED) {
             if (pru_get_cmd_status() != CMD_STATUS_OK) {
                if (pru_get_cmd_status() == CMD_STATUS_DELTA_OVERFLOW) {
-                  msg(MSG_ERR_SERIOUS, "Delta transition time overflow, raw transitions will not accuractly represent cyl %d head %d\n", 
+                  msg(MSG_ERR_SERIOUS, "Delta transition time overflow, raw transitions will not accuractly represent cyl %d head %d\n",
                      deltas_cyl, deltas_head);
                } else if (pru_get_cmd_status() == CMD_STATUS_READ_OVERRUN) {
                   msg(MSG_ERR_SERIOUS, "Delta transitions lost, raw transitions will not accuractly represent cyl %d head %d\n",
@@ -214,7 +214,7 @@ static void *delta_proc(void *arg)
             if (pru_finished_read) {
                // This must be before update_mfm_deltas to prevent
                // next read starting while we are still writing deltas
-               if (drive_params != NULL && 
+               if (drive_params != NULL &&
                      drive_params->transitions_filename != NULL) {
                   write_deltas(drive_params->tran_fd, deltas, track_deltas);
                }

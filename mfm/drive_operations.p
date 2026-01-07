@@ -40,7 +40,7 @@
 // step in, wait for seek complete, then repeat
 slow_seek_track0:
    // Seek in, turn off active low seek in signal driven by inverter
-   CLR      r30, R30_SEEK_DIR_BIT   
+   CLR      r30, R30_SEEK_DIR_BIT
    MOV      r3, DIR_SETTLE_TIME
    MOV      r2, 0
    SBBO     r2, CYCLE_CNTR, 0, 4           // Clear timer
@@ -68,21 +68,21 @@ seek0_next:
    MOV      r2, 0x0                 // Keep zero around
    SBBO     r2, CYCLE_CNTR, 0, 4           // Clear timer
 seek0_w:
-   LBBO     r0, CYCLE_CNTR, 0, 4           
+   LBBO     r0, CYCLE_CNTR, 0, 4
    QBLT     seek0_w, r3, r0
-   CLR      r30, R30_STEP_BIT       
+   CLR      r30, R30_STEP_BIT
 
    // Wait for seek complete
    MOV      r3, SEEK_COMPLETE_TIMEOUT
    CALL     wait_ready
       // Didn't go ready, return to cmd loop. Error set in wait_ready
-   QBNE     wait_cmd, r3, 0    
+   QBNE     wait_cmd, r3, 0
    JMP      seek0_lp
 
 seek0_done:
    MOV      r0, CMD_STATUS_OK
    SBCO     r0, CONST_PRURAM, PRU0_CMD, 4
-   JMP      wait_cmd   
+   JMP      wait_cmd
 
    // Set up time between pulses for type of seek
 slow_seek:
@@ -115,7 +115,7 @@ seek_lp:
 seek_w1:
    LBBO     r0, CYCLE_CNTR, 0, 4           // Wait for pulse width
    QBLT     seek_w1, r8, r0
-   CLR      r30, R30_STEP_BIT       
+   CLR      r30, R30_STEP_BIT
 
    MOV      r3, r6                  // Get Idle time between pulses
    SBBO     r2, CYCLE_CNTR, 0, 4
@@ -130,19 +130,19 @@ check_ready:
    MOV      r3, SEEK_COMPLETE_TIMEOUT
    CALL     wait_ready
       // Didn't go ready, return to cmd loop. Error set in wait_ready
-   QBNE     wait_cmd, r3, 0    
+   QBNE     wait_cmd, r3, 0
    MOV      r1, CMD_STATUS_OK
    SBCO     r1, CONST_PRURAM, PRU0_CMD, 4 // Indicate command completed ok
-   JMP      wait_cmd   
+   JMP      wait_cmd
 
    // We wait for the seek complete timeout for drive to be ready
 check_ready_cmd:
    MOV      r3, SEEK_COMPLETE_TIMEOUT
    CALL     wait_ready
    // Not ready. Wait_ready already set error status
-   QBNE     wait_cmd, r3,0             
+   QBNE     wait_cmd, r3,0
    MOV      r0, CMD_STATUS_OK
-   SBCO     r0, CONST_PRURAM, PRU0_CMD, 4 
+   SBCO     r0, CONST_PRURAM, PRU0_CMD, 4
    JMP      wait_cmd
 
 // Check for drive ready. r3 = timeout value on entry, 0 on return if ready
@@ -180,7 +180,7 @@ ready_timeout:
    CALL     get_status
    MOV      RET_REG, CALL_HOLD
    RET
-   
+
 // r0 modified
 // r1 is updated status register.
 get_status:
@@ -196,7 +196,7 @@ get_status:
 store_status:
    SBCO     r1, CONST_PRURAM, PRU0_STATUS, 4
    RET
-   
+
    // Measure drive RPM, time between index pulses
 rpm:
    MOV      r3, INDEX_TIMEOUT
@@ -225,7 +225,7 @@ rpm_wait4:
    QBLT     rpm_wait4, r3, r0             // Try again if we haven't timed out
    JMP      rpm_timeout
 rpm_done:
-   LBBO     r2, CYCLE_CNTR, 0, 4  
+   LBBO     r2, CYCLE_CNTR, 0, 4
    SBCO     r2, CONST_PRURAM, PRU0_CMD_DATA, 4 // Store rotation time
    MOV      r0, CMD_STATUS_OK
    SBCO     r0, CONST_PRURAM, PRU0_CMD, 4 // Indicate command completed ok

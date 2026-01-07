@@ -89,10 +89,10 @@ static char short_options[] = "d:uq:m:p:c:v";
 // drive_parameters: Drive parameters where most of the parsed values are stored
 // delete_options: Options to delete from list of valid options (short option)
 // initialize: 1 if drive_params should be initialized with defaults
-// only_deleted: 1 if we only want to process options specified in 
+// only_deleted: 1 if we only want to process options specified in
 //    delete_options. Other options are ignored, not error
 // ignore_invalid_options: Don't exit if option is not known
-void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params, 
+void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
     char *delete_options, int initialize, int only_deleted,
     int ignore_invalid_options, int track_layout_format_only)
 {
@@ -109,7 +109,7 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
    if (only_deleted) {
       j = 0;
       for (i = 0; i < sizeof(short_options); i++) {
-         if (short_options[i] != ':' && 
+         if (short_options[i] != ':' &&
                strchr(delete_options, short_options[i]) == 0) {
             delete_list[j++] = short_options[i];
          }
@@ -162,7 +162,7 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
                msg(MSG_FATAL,"Valid options:\n");
                for (i = 0; long_options[i].name != NULL; i++) {
                  if (strchr(delete_options, long_options[i].val) == 0) {
-                    msg(MSG_FATAL, "%c %s\n", long_options[i].val, 
+                    msg(MSG_FATAL, "%c %s\n", long_options[i].val,
                        long_options[i].name);
                  }
                }
@@ -189,9 +189,9 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
             } else {
                drive_params->late_precomp_ns = drive_params->early_precomp_ns;
             }
-            if (drive_params->late_precomp_ns < 0 || 
+            if (drive_params->late_precomp_ns < 0 ||
                   drive_params->late_precomp_ns > 30 ||
-                  drive_params->early_precomp_ns < 0 || 
+                  drive_params->early_precomp_ns < 0 ||
                   drive_params->early_precomp_ns > 30) {
                msg(MSG_FATAL,"Precompensation ns must be 0 to 30\n");
                if (!ignore_invalid_options) {
@@ -212,7 +212,7 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
          case 'm':
             drive_params->emulation_filename = optarg;
             // Caller will correct if file is actually input.
-            drive_params->emulation_output = 1; 
+            drive_params->emulation_output = 1;
             break;
          case 'd':
             drive_params->drive = atoi(optarg);

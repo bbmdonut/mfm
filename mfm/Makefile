@@ -9,7 +9,7 @@
 # make clean
 #
 
-PRU = prucode0.bin
+PRU = prucode0.bin prucode0_ext_stepper.bin
 PRU2 = mfm_write0.bin mfm_write1.bin
 
 OBJDIR=obj
@@ -17,13 +17,15 @@ INCDIR=inc
 
 LIBRARIES = pthread prussdrv m rt
 
-SOURCES =  mfm_read.c mfm_decoder.c wd_mfm_decoder.c xebec_mfm_decoder.c \
+SOURCES =  mfm_read.c decoder_common.c rll_decoder.c wd_rll_decoder.c \
+    mfm_decoder.c wd_mfm_decoder.c xebec_mfm_decoder.c \
 	crc_ecc.c pru_setup.c msg.c parse_cmdline.c analyze.c \
 	deltas_read.c drive.c emu_tran_file.c corvus_mfm_decoder.c \
-	northstar_mfm_decoder.c board.c drive_read.c tagged_mfm_decoder.c \
-        perq_mfm_decoder.c
+	northstar_mfm_decoder.c board.c drive_read.c drive_read_stepper.c \
+	tagged_mfm_decoder.c perq_mfm_decoder.c mcp4725.c TC78H670FTG.c Arduino.c
 OBJECTS = $(addprefix $(OBJDIR)/, $(SOURCES:.c=.o))
-SOURCES2 =  mfm_util.c mfm_decoder.c wd_mfm_decoder.c xebec_mfm_decoder.c \
+SOURCES2 =  mfm_util.c decoder_common.c rll_decoder.c wd_rll_decoder.c \
+    mfm_decoder.c wd_mfm_decoder.c xebec_mfm_decoder.c \
 	crc_ecc.c msg.c parse_cmdline.c emu_tran_file.c corvus_mfm_decoder.c \
 	northstar_mfm_decoder.c analyze.c deltas_read_file.c drive_file.c \
         tagged_mfm_decoder.c perq_mfm_decoder.c
@@ -32,8 +34,8 @@ SOURCES3 =  mfm_write.c msg.c parse_cmdline_write.c emu_tran_file.c \
 	drive.c pru_setup.c crc_ecc.c board.c drive_write.c
 OBJECTS3 = $(addprefix $(OBJDIR)/, $(SOURCES3:.c=.o))
 INCLUDES = $(addprefix $(INCDIR)/, analyze.h cmd.h crc_ecc.h deltas_read.h \
-	drive.h emu_tran_file.h mfm_decoder.h msg.h parse_cmdline.h \
-	pru_setup.h version.h)
+	drive.h emu_tran_file.h decoder_common.h mfm_decoder.h rll_decoder.h \
+	msg.h parse_cmdline.h pru_setup.h version.h TC78H670FTG.h Arduino.h)
 
 CC = c99
 
@@ -44,10 +46,10 @@ $(info no c++ compiler found, CRC support program not built)
 	CPP = echo c++
 endif
 
-FP_ABI = 
+FP_ABI =
 #Rev B angstrom require softfp
 ifneq ($(wildcard /usr/lib/arm-angstrom-linux-gnueabi),)
-	FP_ABI = -mfloat-abi=softfp 
+	FP_ABI = -mfloat-abi=softfp
 endif
 
 # If local copy of PRU package exists use it. Currently the
@@ -99,7 +101,10 @@ find_crc_info : find_crc_info.cpp
 clean :
 	rm -rf $(OBJDIR)/*.o *.bin mfm_read mfm_util core *~ find_crc_info
 
-%.bin: %.p prucode.hp $(INCDIR)/cmd.h drive_operations.p
+prucode0.bin: prucode0.p prucode.hp $(INCDIR)/cmd.h drive_operations.p
+	$(PASM) -b $<
+
+prucode0_ext_stepper.bin: prucode0_ext_stepper.p prucode.hp $(INCDIR)/cmd.h drive_operations_ext_stepper.p
 	$(PASM) -b $<
 
 $(OBJDIR)/%.o: %.c $(INCLUDES) | obj

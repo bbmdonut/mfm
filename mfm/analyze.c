@@ -9,8 +9,9 @@
 // Copyright 2021 David Gesswein.
 // This file is part of MFM disk utilities.
 //
+// 03/31/25 BBMD Add RLL support for identification/analysis
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.
-// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from 
+// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from
 //    header
 // 10/03/24 DJG Made seek speed test warning if it doesn't work properly.
 //    Fails on some drives but read works anyway.
@@ -21,7 +22,7 @@
 // 06/02/23 DJG Fixed write fault error reading NEC drive
 // 03/11/23 DJG Improved EC1841 sector number decoding
 // 07/20/22 DJG Removed useless lines
-// 09/19/21 DJG Fixed indexing of sector_status_list in analyze model. 
+// 09/19/21 DJG Fixed indexing of sector_status_list in analyze model.
 //    Indexing always starts with entry 0 irrespective of first_sector_number
 //    CONT_MODEL formats that stated with sector 1 were not detected properly.
 // 01/17/21 DJG Made match logic for MODEL controllers pick one with closest
@@ -36,7 +37,7 @@
 // 06/19/19 DJG Added missing /n to error message
 // 06/08/19 DJG Don't say disk is RLL if secondary period couldn't be
 //    determined.
-// 03/12/19 DJG Fixed detecting format with MODEL using wrong number or 
+// 03/12/19 DJG Fixed detecting format with MODEL using wrong number or
 //    first sector number
 // 11/03/18 DJG Renamed variable
 // 09/10/18 DJG Made code not allowing larger sector sizes to match when
@@ -62,7 +63,7 @@
 //    of cylinders and suggested simplification for determining slow/fast
 //    seek.
 // 10/01/16 DJG Handle tracks with one sector.
-// 01/24/16 DJG Fix a couple errors with prints. 
+// 01/24/16 DJG Fix a couple errors with prints.
 // 01/13/16 DJG Changes for ext2emu related changes on how drive formats will
 //     be handled.
 // 11/22/15 DJG Add special logic for ST11M controller detection
@@ -81,7 +82,7 @@
 //    Fixed detecting non buffered seek for ST506.
 // 11/09/14 DJG Interleave will not be checked by default
 // 10/01/14 DJG Added new polynomial to analyize and prefixed printing
-//    of polynomial with 0x 
+//    of polynomial with 0x
 //
 // MFM disk utilities is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -108,11 +109,13 @@
 #include "crc_ecc.h"
 #include "emu_tran_file.h"
 #include "mfm_decoder.h"
+#include "rll_decoder.h"
 #include "cmd.h"
 #include "deltas_read.h"
 #include "drive.h"
 #include "analyze.h"
 #include "parse_cmdline.h"
+
 
 // Prints CRC information
 static void print_crc_info(CRC_INFO *crc_info, int msg_type) {
@@ -165,12 +168,12 @@ static double avg_peak(int histogram[], int length)
 // difference in average delta for the minimum delta and the next
 // time in the histogram. The difference is the clock rate used to
 // encode. Estimate is coarse.
-static void analyze_rate(DRIVE_PARAMS *drive_params, int cyl, int head, 
+static void analyze_rate(DRIVE_PARAMS *drive_params, int cyl, int head,
    uint16_t *deltas, int max_deltas)
 {
-    int histogram[100];
+    int histogram[180];
     int i;
-    double rate1, rate2;
+    double rates[7];
 
     memset(histogram, 0, sizeof(histogram));
 
@@ -185,29 +188,47 @@ static void analyze_rate(DRIVE_PARAMS *drive_params, int cyl, int head,
       printf("%d, %d\n", i, histogram[i]);
     }
 #endif
-    rate1 = avg_peak(histogram, ARRAYSIZE(histogram)) * CLOCKS_TO_NS;
-    rate2 = avg_peak(histogram, ARRAYSIZE(histogram)) * CLOCKS_TO_NS;
-  
-    if (fabs(rate1 - 230.4) <= 8.0) {
-       msg(MSG_ERR, "Primary transition period %.0f ns, hopefully this is a SA1000 type disk\n",
-         rate1);
-    } else if (fabs(rate1 - 200) > 8.0) {
-       msg(MSG_ERR, "Primary transition period %.0f ns, should be around 200\n",
-         rate1);
-    } else {
-       if (rate2 <= 280 && rate2 != 0) {
-          msg(MSG_ERR, "Secondary transition period %.0f ns, likely RLL\n",
-            rate2);
-          msg(MSG_ERR, "RLL is not currently supported\n");
-       }
+    // In order to detect RLL, we'll look at standard
+    // clock interval values in the deltas.
+    // For MFM, we'll generally see peaks around 40, 60, and 80.
+    // If we see values around 53, 67, 93, and/or 107,
+    // it's a good bet that we're dealing with RLL.
+    // Regardless of the data capture averages, we should have a hit on
+    // at least one of these in-between intervals.
+
+    for (i = 0; i < 7; i++)
+    {
+      rates[i] = avg_peak(histogram, ARRAYSIZE(histogram)) * CLOCKS_TO_NS;
+      printf("Average peak entry %d: %f\n", i, rates[i]);
+
+      // See if we can spot RLL data here, by looking for a rate
+      // in-between the standard ranges of 200/300/400 (or above/below)
+      // Anything that isn't hovering around +/-8 of a core MFM rate
+      // should bump us over to RLL.
+      if ((rates[i] > 0) && ((rates[i] < 180) ||
+            (rates[i] > 220 && rates[i] < 280) ||
+            (rates[i] > 320 && rates[i] < 380) ||
+            (rates[i] > 420)))
+      {
+         drive_params->is_rll = 1;
+      }
     }
+
+    if (fabs(rates[0] - 230.4) <= 8.0) {
+       msg(MSG_ERR, "Primary transition period %.0f ns, hopefully this is a SA1000 type disk\n",
+         rates[0]);
+    } else if (fabs(rates[0] - 200) > 8.0) {
+       msg(MSG_ERR, "Primary transition period %.0f ns, should be around 200\n",
+         rates[0]);
+    }
+
     msg(MSG_DEBUG, "First two transition periods %.0f, %.0f ns\n",
-         rate1, rate2);
+         rates[0], rates[1]);
 }
 
 // Try to find match for existing fully defined format. Some of the formats
 // have all data defined such as CRC and other are just defining the header
-// format. If CRC info is defined we treat as model even if not set to 
+// format. If CRC info is defined we treat as model even if not set to
 // CONT_MODEL. Not sure why I did that.
 //
 // drive_params: Drive parameters determined so far and return what we have determined
@@ -216,7 +237,7 @@ static void analyze_rate(DRIVE_PARAMS *drive_params, int cyl, int head,
 // max_deltas: Size of deltas array
 // match_count: Number of headers that matched for each format found
 // return: Number of matching formats found
-static int analyze_model(DRIVE_PARAMS *drive_params, int cyl, int head, 
+static int analyze_model(DRIVE_PARAMS *drive_params, int cyl, int head,
    void *deltas, int max_deltas)
 {
    int i;
@@ -243,90 +264,190 @@ static int analyze_model(DRIVE_PARAMS *drive_params, int cyl, int head,
 
    drive_params->num_head = MAX_HEAD;
 
-   // Search all the fully defined formats we know about.
-   // If LBA format don't try to analyze if cyl and head are zero since CHS
-   // headers will match
-   for (cont = 0; mfm_controller_info[cont].name != NULL; cont++) {
-      int missing_count = 0;
+   if (drive_params->is_rll)
+   {
+      // For RLL, we have to treat things a bit differently.
+      // MFM encoding is pretty universal, due to timings and the
+      // direct 2-to-1 decoding process. RLL has variable-length
+      // encoding patterns (4/6/8), which also differ across
+      // manufacturers/models.
 
-      if ((mfm_controller_info[cont].analyze_type == CINFO_LBA &&
-           cyl == 0 && head == 0) ||
-           mfm_controller_info[cont].write_data_crc.length == 0) {
-         continue; // ****
-      }
-//printf("Checking %s\n", mfm_controller_info[cont].name);
-      parse_set_drive_params_from_controller(drive_params, cont);
+      // For now, we're going to mirror the MFM functions with
+      // RLL names as best as we can.
+      // TODO (BBMD): Consider some form of user-configurable "plugin"
+      // system for adding new controllers/layouts
+      printf("Drive identified as potentially being RLL. Testing known RLL controllers...\n");
 
-      // If we change start_time_ns we need to reread track
-      if (track_start_time_ns != drive_params->start_time_ns) {
-         drive_read_track(drive_params, cyl, head, deltas, max_deltas, 0);
-         track_start_time_ns = drive_params->start_time_ns;
-      }
-      mfm_init_sector_status_list(sector_status_list, MAX_SECTORS);
-      msg_mask_hold = msg_set_err_mask(decode_errors);
-      // Decode track
-      decode_status = mfm_decode_track(drive_params, cyl, head, deltas, NULL, 
-                  sector_status_list);
-      msg_set_err_mask(msg_mask_hold);
-      not_match = 0;
-      int bad = 0;
-      for (i = 0; i < MAX_SECTORS; i++) {
-         // If we find a good sector outside the range we expect or are
-         // missing a sector then don't consider it a match. Read errors
-         // can cause format match to fail.
-         if (sector_status_list[i].status & ANALYZE_WRONG_FORMAT) {
-            not_match = 1;
+      for (cont = 0; controller_info[cont].name != NULL; cont++) {
+         int missing_count = 0;
+
+         if ((controller_info[cont].analyze_type == CINFO_LBA &&
+            cyl == 0 && head == 0) ||
+            controller_info[cont].write_data_crc.length == 0) {
+            continue; // ****
          }
-         if (sector_status_list[i].status & SECT_SPARE_BAD) {
-            bad++;
+         // printf("Checking %s\n", controller_info[cont].name);
+         parse_set_drive_params_from_controller(drive_params, cont);
+
+         // If we change start_time_ns we need to reread track
+         if (track_start_time_ns != drive_params->start_time_ns) {
+            drive_read_track(drive_params, cyl, head, deltas, max_deltas, 0);
+            track_start_time_ns = drive_params->start_time_ns;
          }
-         if (sector_status_list[i].status & SECT_BAD_HEADER) {
-            if (i < drive_params->num_sectors) {
-               // Allow one missed sector
-               if (missing_count++ >= 1) {
+         init_sector_status_list(sector_status_list, MAX_SECTORS);
+         msg_mask_hold = msg_set_err_mask(decode_errors);
+         // Decode track
+         decode_status = rll_decode_track(drive_params, cyl, head, deltas, NULL,
+                     sector_status_list);
+         msg_set_err_mask(msg_mask_hold);
+         not_match = 0;
+         int bad = 0;
+         for (i = 0; i < MAX_SECTORS; i++) {
+            // If we find a good sector outside the range we expect or are
+            // missing a sector then don't consider it a match. Read errors
+            // can cause format match to fail.
+            if (sector_status_list[i].status & ANALYZE_WRONG_FORMAT) {
+               not_match = 1;
+            }
+            if (sector_status_list[i].status & SECT_SPARE_BAD) {
+               bad++;
+            }
+            if (sector_status_list[i].status & SECT_BAD_HEADER) {
+               if (i < drive_params->num_sectors) {
+                  // Allow one missed sector
+                  if (missing_count++ >= 1) {
+                     not_match = 1;
+                  }
+               }
+            } else {
+               if (i >= drive_params->num_sectors) {
                   not_match = 1;
                }
             }
-         } else {
-            if (i >= drive_params->num_sectors) {
-               not_match = 1;
+         }
+         // This was for separating Adaptec_4000_18sector_512b from ST11MB
+         // The header decoded but interpreted as LBA addresses they weren't
+         // sensible
+         // TODO (BBMD): Holdover from MFM code. Evaluate for removal.
+         if (bad > 3) {
+            not_match = 1;
+         }
+         // This currently is for separating ST11M from ST11MB. ST11MB has
+         // spare sectors on each track.
+         // TODO (BBMD): Holdover from MFM code. Evaluate for removal.
+         int spare = decode_status & SECT_ANALYZE_SPARE;
+         if ((controller_info[cont].flag & FLAG_ANALYZE_SPARE_SECT && !spare) ||
+            (!(controller_info[cont].flag & FLAG_ANALYZE_SPARE_SECT) && spare)) {
+            not_match = 1;
+         }
+         int good_data_count = 0;
+         for (i = 0; i < drive_params->num_sectors; i++) {
+            if (!(sector_status_list[i].status & (SECT_BAD_DATA | SECT_BAD_HEADER))) {
+               good_data_count++;
             }
          }
-      }
-      // This was for separating Adaptec_4000_18sector_512b from ST11MB
-      // The header decoded but interpreted as LBA addresses they weren't
-      // sensible
-      if (bad > 3) {
-         not_match = 1;
-      }
-      // This currently is for separating ST11M from ST11MB. ST11MB has
-      // spare sectors on each track.
-      int spare = decode_status & SECT_ANALYZE_SPARE;
-      if ((mfm_controller_info[cont].flag & FLAG_ANALYZE_SPARE_SECT && !spare) ||
-          (!(mfm_controller_info[cont].flag & FLAG_ANALYZE_SPARE_SECT) && spare)) {
-          not_match = 1;
-      }
-      int good_data_count = 0;
-      for (i = 0; i < drive_params->num_sectors; i++) {
-         if (!(sector_status_list[i].status & (SECT_BAD_DATA | SECT_BAD_HEADER))) {
-            good_data_count++;
-         }
-      }
-//printf("%s not match %d good %d\n", mfm_controller_info[cont].name, not_match, good_data_count);
-      if (!not_match && good_data_count >= ceil(drive_params->num_sectors * 2 / 3.0) &&
-             matches < ARRAYSIZE(match_list)) {
-         int diff = good_data_count - drive_params->num_sectors;
+         if (!not_match && good_data_count >= ceil(drive_params->num_sectors * 2 / 3.0) &&
+               matches < ARRAYSIZE(match_list)) {
+            int diff = good_data_count - drive_params->num_sectors;
 
-         match_list[matches] = cont;
-         msg(MSG_INFO, "Found matching format %s: good count difference %d\n", 
-            mfm_controller_info[cont].name, diff);
-         if (abs(diff) < best_match_count) {
-            best_match_count = abs(diff);
-            best_match = matches;
+            match_list[matches] = cont;
+            msg(MSG_INFO, "Found matching format %s: good count difference %d\n",
+               controller_info[cont].name, diff);
+            if (abs(diff) < best_match_count) {
+               best_match_count = abs(diff);
+               best_match = matches;
+            }
+            matches++;
          }
-         matches++;
       }
+   } else {
+      // Search all the fully defined formats we know about.
+      // If LBA format don't try to analyze if cyl and head are zero since CHS
+      // headers will match
+      for (cont = 0; controller_info[cont].name != NULL; cont++) {
+         int missing_count = 0;
+
+         if ((controller_info[cont].analyze_type == CINFO_LBA &&
+            cyl == 0 && head == 0) ||
+            controller_info[cont].write_data_crc.length == 0) {
+            continue; // ****
+         }
+         //printf("Checking %s\n", controller_info[cont].name);
+         parse_set_drive_params_from_controller(drive_params, cont);
+
+         // If we change start_time_ns we need to reread track
+         if (track_start_time_ns != drive_params->start_time_ns) {
+            drive_read_track(drive_params, cyl, head, deltas, max_deltas, 0);
+            track_start_time_ns = drive_params->start_time_ns;
+         }
+         init_sector_status_list(sector_status_list, MAX_SECTORS);
+         msg_mask_hold = msg_set_err_mask(decode_errors);
+         // Decode track
+         decode_status = mfm_decode_track(drive_params, cyl, head, deltas, NULL,
+                     sector_status_list);
+         msg_set_err_mask(msg_mask_hold);
+         not_match = 0;
+         int bad = 0;
+         for (i = 0; i < MAX_SECTORS; i++) {
+            // If we find a good sector outside the range we expect or are
+            // missing a sector then don't consider it a match. Read errors
+            // can cause format match to fail.
+            if (sector_status_list[i].status & ANALYZE_WRONG_FORMAT) {
+               not_match = 1;
+            }
+            if (sector_status_list[i].status & SECT_SPARE_BAD) {
+               bad++;
+            }
+            if (sector_status_list[i].status & SECT_BAD_HEADER) {
+               if (i < drive_params->num_sectors) {
+                  // Allow one missed sector
+                  if (missing_count++ >= 1) {
+                     not_match = 1;
+                  }
+               }
+            } else {
+               if (i >= drive_params->num_sectors) {
+                  not_match = 1;
+               }
+            }
+         }
+         // This was for separating Adaptec_4000_18sector_512b from ST11MB
+         // The header decoded but interpreted as LBA addresses they weren't
+         // sensible
+         if (bad > 3) {
+            not_match = 1;
+         }
+         // This currently is for separating ST11M from ST11MB. ST11MB has
+         // spare sectors on each track.
+         int spare = decode_status & SECT_ANALYZE_SPARE;
+         if ((controller_info[cont].flag & FLAG_ANALYZE_SPARE_SECT && !spare) ||
+            (!(controller_info[cont].flag & FLAG_ANALYZE_SPARE_SECT) && spare)) {
+            not_match = 1;
+         }
+         int good_data_count = 0;
+         for (i = 0; i < drive_params->num_sectors; i++) {
+            if (!(sector_status_list[i].status & (SECT_BAD_DATA | SECT_BAD_HEADER))) {
+               good_data_count++;
+            }
+         }
+//printf("%s not match %d good %d\n", controller_info[cont].name, not_match, good_data_count);
+         if (!not_match && good_data_count >= ceil(drive_params->num_sectors * 2 / 3.0) &&
+               matches < ARRAYSIZE(match_list)) {
+            int diff = good_data_count - drive_params->num_sectors;
+
+            match_list[matches] = cont;
+            msg(MSG_INFO, "Found matching format %s: good count difference %d\n",
+               controller_info[cont].name, diff);
+            if (abs(diff) < best_match_count) {
+               best_match_count = abs(diff);
+               best_match = matches;
+            }
+            matches++;
+         }
+      }
+
    }
+
 
    // If we found at least one match set drive parameters to first match
    if (matches >= 1) {
@@ -347,8 +468,8 @@ static int analyze_model(DRIVE_PARAMS *drive_params, int cyl, int head,
 // drive_params_list_len: Size of drive_params_list array
 // match_count: Number of headers that matched for each format found
 // return: Number of matching formats found
-static int analyze_header(DRIVE_PARAMS *drive_params, int cyl, int head, 
-   void *deltas, int max_deltas, DRIVE_PARAMS drive_params_list[], 
+static int analyze_header(DRIVE_PARAMS *drive_params, int cyl, int head,
+   void *deltas, int max_deltas, DRIVE_PARAMS drive_params_list[],
    int drive_params_list_len, int match_count[])
 {
    // Loop variables
@@ -378,119 +499,234 @@ static int analyze_header(DRIVE_PARAMS *drive_params, int cyl, int head,
    drive_params->header_crc.ecc_max_span = 0;
    drive_params->data_crc.ecc_max_span = 0;
 
-   // Try an exhaustive search of all the formats we know about. If we get too
-   // many we may have to try something smarter.
-   // If LBA format don't try to analyze if cyl and head are zero since CHS
-   // headers will match
-   for (cont = 0; mfm_controller_info[cont].name != NULL; cont++) {
-      if ((mfm_controller_info[cont].analyze_type == CINFO_LBA &&
-           cyl == 0 && head == 0) ||
-           mfm_controller_info[cont].analyze_search == CONT_MODEL) {
-         continue; // ****
-      }
-      // Make sure these get set at bottom for final controller picked
-      // Sector size will be set when we analyze the data header
-      drive_params->controller = cont;
-      drive_params->sector_size = 
-         mfm_controller_info[cont].analyze_sector_size;
-      if (!drive_params->dont_change_start_time) {
-         drive_params->start_time_ns = 
-            mfm_controller_info[cont].start_time_ns;
-      }
-      // TODO: This would be faster if we just searched in mfm_process_bytes
-      // where we check the CRC instead of decoding the MFM transitions
-      // each time.
-      for (poly = mfm_controller_info[cont].header_start_poly; 
-             poly < mfm_controller_info[cont].header_end_poly; poly++) {
-         drive_params->header_crc.poly = mfm_all_poly[poly].poly;
-         drive_params->header_crc.length = mfm_all_poly[poly].length;
-         for (init = mfm_controller_info[cont].start_init; 
-                init < mfm_controller_info[cont].end_init; init++) {
-            // If not correct size don't try this initial value
-            if (!(mfm_all_init[init].length == -1 || mfm_all_init[init].length ==
-                 drive_params->data_crc.length)) {
-               continue;
-            }
-            drive_params->header_crc.init_value = trim_value(mfm_all_init[init].value,
-               drive_params->header_crc.length);
-            drive_params->data_crc = drive_params->header_crc;
-            msg(MSG_DEBUG, "Trying controller %s ", 
-               mfm_controller_info[drive_params->controller].name);
-            print_crc_info(&drive_params->header_crc, MSG_DEBUG);
-            
-            // After the CRC has gone to zero additional zero bytes will
-            // not cause CRC errors. If we found a valid header we won't
-            // check any longer ones to prevent false matches.
-            if (controller_type != -1 && mfm_controller_info[cont].header_bytes > 
-                 mfm_controller_info[controller_type].header_bytes) {
-               break;
-            }
-            mfm_init_sector_status_list(sector_status_list, drive_params->num_sectors);
-            msg_mask_hold = msg_set_err_mask(decode_errors);
-            // Decode track
-            status = mfm_decode_track(drive_params, cyl, head, deltas, NULL, 
-                  sector_status_list);
-            msg_set_err_mask(msg_mask_hold);
-            if (status & SECT_ZERO_HEADER_CRC) {
-               msg(MSG_DEBUG, "Found zero CRC header controller %s:\n",
-                     mfm_controller_info[drive_params->controller].name);
-               print_crc_info(&drive_params->header_crc, MSG_DEBUG);
+   if (drive_params->is_rll)
+   {
+      for (cont = 0; controller_info[cont].name != NULL; cont++) {
+         if ((controller_info[cont].analyze_type == CINFO_LBA &&
+            cyl == 0 && head == 0) ||
+            controller_info[cont].analyze_search == CONT_MODEL) {
+            continue; // ****
+         }
+         // Make sure these get set at bottom for final controller picked
+         // Sector size will be set when we analyze the data header
+         drive_params->controller = cont;
+         drive_params->sector_size =
+            controller_info[cont].analyze_sector_size;
+         if (!drive_params->dont_change_start_time) {
+            drive_params->start_time_ns =
+               controller_info[cont].start_time_ns;
+         }
+         // TODO: This would be faster if we just searched in mfm_process_bytes
+         // where we check the CRC instead of decoding the MFM transitions
+         // each time.
+         for (poly = controller_info[cont].header_start_poly;
+               poly < controller_info[cont].header_end_poly; poly++) {
+            drive_params->header_crc.poly = rll_all_poly[poly].poly;
+            drive_params->header_crc.length = rll_all_poly[poly].length;
+            for (init = controller_info[cont].start_init;
+                  init < controller_info[cont].end_init; init++) {
+               // If not correct size don't try this initial value
+               if (!(rll_all_init[init].length == -1 || rll_all_init[init].length ==
+                  drive_params->data_crc.length)) {
+                  continue;
+               }
+               drive_params->header_crc.init_value = trim_value(rll_all_init[init].value,
+                  drive_params->header_crc.length);
+               drive_params->data_crc = drive_params->header_crc;
+               //msg(MSG_DEBUG, "Trying controller %s ",
+                  // controller_info[drive_params->controller].name);
+               // print_crc_info(&drive_params->header_crc, MSG_DEBUG);
 
-            }
-            // Now find out how many good sectors we got with these parameters
-            good_header_count = 0;
-            min_lba_addr = 0x7fffffff;
-            max_lba_addr = -1;
-            for (i = 0; i < drive_params->num_sectors; i++) {
-               if (!(sector_status_list[i].status & SECT_BAD_HEADER) &&
-                   !(sector_status_list[i].status & SECT_AMBIGUOUS_CRC)) {
-                  good_header_count++;
-                  if (sector_status_list[i].lba_addr < min_lba_addr) {
-                     min_lba_addr = sector_status_list[i].lba_addr;
-                  } else if (sector_status_list[i].lba_addr > max_lba_addr) {
-                     max_lba_addr = sector_status_list[i].lba_addr;
+               // After the CRC has gone to zero additional zero bytes will
+               // not cause CRC errors. If we found a valid header we won't
+               // check any longer ones to prevent false matches.
+               if (controller_type != -1 && controller_info[cont].header_bytes >
+                  controller_info[controller_type].header_bytes) {
+                  break;
+               }
+               init_sector_status_list(sector_status_list, drive_params->num_sectors);
+               msg_mask_hold = msg_set_err_mask(decode_errors);
+               // Decode track
+               status = rll_decode_track(drive_params, cyl, head, deltas, NULL,
+                     sector_status_list);
+               msg_set_err_mask(msg_mask_hold);
+               if (status & SECT_ZERO_HEADER_CRC) {
+                  msg(MSG_DEBUG, "Found zero CRC header controller %s:\n",
+                        controller_info[drive_params->controller].name);
+                  // print_crc_info(&drive_params->header_crc, MSG_DEBUG);
+
+               }
+               // Now find out how many good sectors we got with these parameters
+               good_header_count = 0;
+               min_lba_addr = 0x7fffffff;
+               max_lba_addr = -1;
+               for (i = 0; i < drive_params->num_sectors; i++) {
+                  if (!(sector_status_list[i].status & SECT_BAD_HEADER) &&
+                     !(sector_status_list[i].status & SECT_AMBIGUOUS_CRC)) {
+                     good_header_count++;
+                     if (sector_status_list[i].lba_addr < min_lba_addr) {
+                        min_lba_addr = sector_status_list[i].lba_addr;
+                     } else if (sector_status_list[i].lba_addr > max_lba_addr) {
+                        max_lba_addr = sector_status_list[i].lba_addr;
+                     }
                   }
                }
-            }
-            // If LBA drive make sure addresses are somewhat adjacent and
-            // plausible for the cylinder. If not clear good header count
-            if (mfm_controller_info[cont].analyze_type == CINFO_LBA &&
-               (max_lba_addr - min_lba_addr > drive_params->num_sectors ||
-                  max_lba_addr - min_lba_addr + 1 < good_header_count ||
-                  min_lba_addr > cyl * 16 * 34)) {
-               good_header_count = 0;
-            }
-            // If we found at least 2 sectors or 1 if sector is large
-            // enough to only have one per track 
-            if (good_header_count >= 2 || (good_header_count == 1 &&
-                 drive_params->sector_size > 9000) ) {
-               // Keep the best
-               if (good_header_count > previous_good_header_count) {
-                  controller_type = drive_params->controller;
-                  previous_good_header_count = good_header_count;
+               // If LBA drive make sure addresses are somewhat adjacent and
+               // plausible for the cylinder. If not clear good header count
+               if (controller_info[cont].analyze_type == CINFO_LBA &&
+                  (max_lba_addr - min_lba_addr > drive_params->num_sectors ||
+                     max_lba_addr - min_lba_addr + 1 < good_header_count ||
+                     min_lba_addr > cyl * 16 * 34)) {
+                  good_header_count = 0;
                }
-               if (drive_params_list_index >= drive_params_list_len) {
-                  msg(MSG_FATAL, "Too many header formats found %d\n", 
-                    drive_params_list_index);
-                  exit(1);
+               // If we found at least 2 sectors or 1 if sector is large
+               // enough to only have one per track
+               if (good_header_count >= 2 || (good_header_count == 1 &&
+                  drive_params->sector_size > 9000) ) {
+                  // Keep the best
+                  if (good_header_count > previous_good_header_count) {
+                     controller_type = drive_params->controller;
+                     previous_good_header_count = good_header_count;
+                  }
+                  if (drive_params_list_index >= drive_params_list_len) {
+                     msg(MSG_FATAL, "Too many header formats found %d\n",
+                     drive_params_list_index);
+                     exit(1);
+                  }
+                  // Save in list
+                  drive_params_list[drive_params_list_index] =
+                  *drive_params;
+                  drive_params_list[drive_params_list_index].header_crc.ecc_max_span
+                     = rll_all_poly[poly].ecc_span;
+                  // Set the data CRC span also so drives without seaparate data
+                  // and header ECC will have both fields correct.
+                  drive_params_list[drive_params_list_index].data_crc.ecc_max_span
+                     = rll_all_poly[poly].ecc_span;
+                  match_count[drive_params_list_index++] = good_header_count;
+                  msg(MSG_DEBUG, "Found %d headers matching:\n", good_header_count);
+                  // print_crc_info(&drive_params->header_crc, MSG_DEBUG);
+                  msg(MSG_DEBUG, "Controller type %s\n",
+                     controller_info[drive_params->controller].name);
                }
-               // Save in list
-               drive_params_list[drive_params_list_index] =
-                 *drive_params;
-               drive_params_list[drive_params_list_index].header_crc.ecc_max_span 
-                  = mfm_all_poly[poly].ecc_span;
-               // Set the data CRC span also so drives without seaparate data
-               // and header ECC will have both fields correct.
-               drive_params_list[drive_params_list_index].data_crc.ecc_max_span 
-                  = mfm_all_poly[poly].ecc_span;
-               match_count[drive_params_list_index++] = good_header_count; 
-               msg(MSG_DEBUG, "Found %d headers matching:\n", good_header_count);
-               print_crc_info(&drive_params->header_crc, MSG_DEBUG);
-               msg(MSG_DEBUG, "Controller type %s\n", 
-                   mfm_controller_info[drive_params->controller].name);
             }
          }
       }
+   } else {
+      // Try an exhaustive search of all the formats we know about. If we get too
+      // many we may have to try something smarter.
+      // If LBA format don't try to analyze if cyl and head are zero since CHS
+      // headers will match
+      for (cont = 0; controller_info[cont].name != NULL; cont++) {
+         if ((controller_info[cont].analyze_type == CINFO_LBA &&
+            cyl == 0 && head == 0) ||
+            controller_info[cont].analyze_search == CONT_MODEL) {
+            continue; // ****
+         }
+         // Make sure these get set at bottom for final controller picked
+         // Sector size will be set when we analyze the data header
+         drive_params->controller = cont;
+         drive_params->sector_size =
+            controller_info[cont].analyze_sector_size;
+         if (!drive_params->dont_change_start_time) {
+            drive_params->start_time_ns =
+               controller_info[cont].start_time_ns;
+         }
+         // TODO: This would be faster if we just searched in mfm_process_bytes
+         // where we check the CRC instead of decoding the MFM transitions
+         // each time.
+         for (poly = controller_info[cont].header_start_poly;
+               poly < controller_info[cont].header_end_poly; poly++) {
+            drive_params->header_crc.poly = mfm_all_poly[poly].poly;
+            drive_params->header_crc.length = mfm_all_poly[poly].length;
+            for (init = controller_info[cont].start_init;
+                  init < controller_info[cont].end_init; init++) {
+               // If not correct size don't try this initial value
+               if (!(mfm_all_init[init].length == -1 || mfm_all_init[init].length ==
+                  drive_params->data_crc.length)) {
+                  continue;
+               }
+               drive_params->header_crc.init_value = trim_value(mfm_all_init[init].value,
+                  drive_params->header_crc.length);
+               drive_params->data_crc = drive_params->header_crc;
+               // msg(MSG_DEBUG, "Trying controller %s ",
+                  // controller_info[drive_params->controller].name);
+               // print_crc_info(&drive_params->header_crc, MSG_DEBUG);
+
+               // After the CRC has gone to zero additional zero bytes will
+               // not cause CRC errors. If we found a valid header we won't
+               // check any longer ones to prevent false matches.
+               if (controller_type != -1 && controller_info[cont].header_bytes >
+                  controller_info[controller_type].header_bytes) {
+                  break;
+               }
+               init_sector_status_list(sector_status_list, drive_params->num_sectors);
+               msg_mask_hold = msg_set_err_mask(decode_errors);
+               // Decode track
+               status = mfm_decode_track(drive_params, cyl, head, deltas, NULL,
+                     sector_status_list);
+               msg_set_err_mask(msg_mask_hold);
+               if (status & SECT_ZERO_HEADER_CRC) {
+                  msg(MSG_DEBUG, "Found zero CRC header controller %s:\n",
+                        controller_info[drive_params->controller].name);
+                  // print_crc_info(&drive_params->header_crc, MSG_DEBUG);
+
+               }
+               // Now find out how many good sectors we got with these parameters
+               good_header_count = 0;
+               min_lba_addr = 0x7fffffff;
+               max_lba_addr = -1;
+               for (i = 0; i < drive_params->num_sectors; i++) {
+                  if (!(sector_status_list[i].status & SECT_BAD_HEADER) &&
+                     !(sector_status_list[i].status & SECT_AMBIGUOUS_CRC)) {
+                     good_header_count++;
+                     if (sector_status_list[i].lba_addr < min_lba_addr) {
+                        min_lba_addr = sector_status_list[i].lba_addr;
+                     } else if (sector_status_list[i].lba_addr > max_lba_addr) {
+                        max_lba_addr = sector_status_list[i].lba_addr;
+                     }
+                  }
+               }
+               // If LBA drive make sure addresses are somewhat adjacent and
+               // plausible for the cylinder. If not clear good header count
+               if (controller_info[cont].analyze_type == CINFO_LBA &&
+                  (max_lba_addr - min_lba_addr > drive_params->num_sectors ||
+                     max_lba_addr - min_lba_addr + 1 < good_header_count ||
+                     min_lba_addr > cyl * 16 * 34)) {
+                  good_header_count = 0;
+               }
+               // If we found at least 2 sectors or 1 if sector is large
+               // enough to only have one per track
+               if (good_header_count >= 2 || (good_header_count == 1 &&
+                  drive_params->sector_size > 9000) ) {
+                  // Keep the best
+                  if (good_header_count > previous_good_header_count) {
+                     controller_type = drive_params->controller;
+                     previous_good_header_count = good_header_count;
+                  }
+                  if (drive_params_list_index >= drive_params_list_len) {
+                     msg(MSG_FATAL, "Too many header formats found %d\n",
+                     drive_params_list_index);
+                     exit(1);
+                  }
+                  // Save in list
+                  drive_params_list[drive_params_list_index] =
+                  *drive_params;
+                  drive_params_list[drive_params_list_index].header_crc.ecc_max_span
+                     = mfm_all_poly[poly].ecc_span;
+                  // Set the data CRC span also so drives without seaparate data
+                  // and header ECC will have both fields correct.
+                  drive_params_list[drive_params_list_index].data_crc.ecc_max_span
+                     = mfm_all_poly[poly].ecc_span;
+                  match_count[drive_params_list_index++] = good_header_count;
+                  msg(MSG_DEBUG, "Found %d headers matching:\n", good_header_count);
+                  print_crc_info(&drive_params->header_crc, MSG_DEBUG);
+                  msg(MSG_DEBUG, "Controller type %s\n",
+                     controller_info[drive_params->controller].name);
+               }
+            }
+         }
+      }
+
    }
    return drive_params_list_index;
 }
@@ -531,15 +767,15 @@ static int analyze_data(DRIVE_PARAMS *drive_params, int cyl, int head, void *del
    data_crc_info.poly = 0;
    // Try an exhaustive search of all the formats we know about. If we get too
    // many we may have to try something smarter.
-   for (poly = mfm_controller_info[drive_params->controller].data_start_poly; 
-          poly < mfm_controller_info[drive_params->controller].data_end_poly; poly++) {
+   for (poly = controller_info[drive_params->controller].data_start_poly;
+          poly < controller_info[drive_params->controller].data_end_poly; poly++) {
       drive_params->data_crc.poly = mfm_all_poly[poly].poly;
       drive_params->data_crc.length = mfm_all_poly[poly].length;
       // This sometimes gets false corrections when using wrong polynomial
       // We put it back when we save the best value.
       drive_params->data_crc.ecc_max_span = 0;
-      for (init = mfm_controller_info[drive_params->controller].start_init; 
-            init < mfm_controller_info[drive_params->controller].end_init; init++) {
+      for (init = controller_info[drive_params->controller].start_init;
+            init < controller_info[drive_params->controller].end_init; init++) {
          // If not correct size don't try this initial value
          if (!(mfm_all_init[init].length == -1 || mfm_all_init[init].length ==
               drive_params->data_crc.length)) {
@@ -556,12 +792,12 @@ static int analyze_data(DRIVE_PARAMS *drive_params, int cyl, int head, void *del
                  previous_good_data_count >= .6 * headers_match) {
                continue;
             }
-            msg(MSG_DEBUG, "Trying controller data %s len %d ", 
-               mfm_controller_info[drive_params->controller].name,
+            msg(MSG_DEBUG, "Trying controller data %s len %d ",
+               controller_info[drive_params->controller].name,
                drive_params->sector_size);
             print_crc_info(&drive_params->data_crc, MSG_DEBUG);
 
-            mfm_init_sector_status_list(sector_status_list, drive_params->num_sectors);
+            init_sector_status_list(sector_status_list, drive_params->num_sectors);
             msg_mask_hold = msg_set_err_mask(decode_errors);
             // Decode track
             status = mfm_decode_track(drive_params, cyl, head, deltas, NULL, sector_status_list);
@@ -649,7 +885,6 @@ static void analyze_sectors(DRIVE_PARAMS *drive_params, int cyl, void *deltas,
        int found_bad_header;
        int err_count = 0;
        int min_lba = INT_MAX;
-
        msg_mask_hold = msg_set_err_mask(decode_errors);
        // Try to get a good read. sector_status_list will be the best from
        // all the reads.
@@ -661,9 +896,10 @@ static void analyze_sectors(DRIVE_PARAMS *drive_params, int cyl, void *deltas,
              break;
           }
 
-          mfm_init_sector_status_list(sector_status_list, drive_params->num_sectors);
-          status = mfm_decode_track(drive_params, cyl, head, deltas, NULL, sector_status_list);
-          if (UNRECOVERED_ERROR(status) && head == 8 && 
+          init_sector_status_list(sector_status_list, drive_params->num_sectors);
+          status = (drive_params->is_rll) ? rll_decode_track(drive_params, cyl, head, deltas, NULL, sector_status_list) :
+            mfm_decode_track(drive_params, cyl, head, deltas, NULL, sector_status_list);
+          if (UNRECOVERED_ERROR(status) && head == 8 &&
                 drive_params->controller == CONTROLLER_WD_1006) {
              int good_header = 0;
              for (i = 0; i < drive_params->num_sectors; i++) {
@@ -678,7 +914,7 @@ static void analyze_sectors(DRIVE_PARAMS *drive_params, int cyl, void *deltas,
              if (!good_header && last_good_head == 7 && head == 8) {
                 int orig_controller = drive_params->controller;
                 drive_params->controller = CONTROLLER_MIGHTYFRAME;
-                status = mfm_decode_track(drive_params, cyl, head, deltas, 
+                status = mfm_decode_track(drive_params, cyl, head, deltas,
                     NULL, sector_status_list);
                 for (i = 0; i < drive_params->num_sectors; i++) {
                    if ((sector_status_list[i].status & SECT_HEADER_FOUND) &&
@@ -688,10 +924,10 @@ static void analyze_sectors(DRIVE_PARAMS *drive_params, int cyl, void *deltas,
                 }
                 if (good_header) {
                    msg(MSG_FORMAT,"Changed controller type to %s\n",
-                     mfm_controller_info[drive_params->controller].name);
+                     controller_info[drive_params->controller].name);
                 } else {
                    drive_params->controller = CONTROLLER_DG_MV2000;
-                   status = mfm_decode_track(drive_params, cyl, head, deltas, 
+                   status = mfm_decode_track(drive_params, cyl, head, deltas,
                        NULL, sector_status_list);
                    for (i = 0; i < drive_params->num_sectors; i++) {
                       if ((sector_status_list[i].status & SECT_HEADER_FOUND) &&
@@ -701,10 +937,10 @@ static void analyze_sectors(DRIVE_PARAMS *drive_params, int cyl, void *deltas,
                    }
                    if (good_header) {
                       msg(MSG_FORMAT,"Changed controller type to %s\n",
-                        mfm_controller_info[drive_params->controller].name);
+                        controller_info[drive_params->controller].name);
                    } else {
                       drive_params->controller = orig_controller;
-                      status = mfm_decode_track(drive_params, cyl, head, deltas, 
+                      status = mfm_decode_track(drive_params, cyl, head, deltas,
                           NULL, sector_status_list);
                    }
                 }
@@ -740,7 +976,7 @@ static void analyze_sectors(DRIVE_PARAMS *drive_params, int cyl, void *deltas,
              }
              max_sector = MAX(max_sector, sector_status_list[i].sector);
              min_sector = MIN(min_sector, sector_status_list[i].sector);
-             if (mfm_controller_info[drive_params->controller].analyze_type == CINFO_LBA) {
+             if (controller_info[drive_params->controller].analyze_type == CINFO_LBA) {
                 if (sector_status_list[i].lba_addr < min_lba) {
                    min_lba = sector_status_list[i].lba_addr;
                 }
@@ -769,7 +1005,6 @@ static void analyze_sectors(DRIVE_PARAMS *drive_params, int cyl, void *deltas,
        }
        last_min_lba = min_lba;
     }
-
 
     drive_set_head(0); // Make sure head valid for NEC drives
 
@@ -808,7 +1043,7 @@ static void analyze_sectors(DRIVE_PARAMS *drive_params, int cyl, void *deltas,
     }
 }
 
-// Test if seek at specified rate works. We 
+// Test if seek at specified rate works.
 //
 // drive_params: Drive parameters determined so far.
 // return: 0 if seek at specified speed worked, 1 otherwise
@@ -822,7 +1057,7 @@ static int analyze_seek(DRIVE_PARAMS *drive_params) {
    // Step down the drive at the specified rate then verify
    // it takes the same number of slow steps to return back to
    // track 0.
-   drive_step(drive_params->step_speed, seek, 
+   drive_step(drive_params->step_speed, seek,
            DRIVE_STEP_UPDATE_CYL, DRIVE_STEP_FATAL_ERR);
    // Give time for track0 to change before we check
    usleep(1000);
@@ -831,7 +1066,7 @@ static int analyze_seek(DRIVE_PARAMS *drive_params) {
       rc = 1;
    } else {
       for (i = 1; i <= seek && rc == 0; i++) {
-         drive_step(DRIVE_STEP_SLOW, -1, 
+         drive_step(DRIVE_STEP_SLOW, -1,
             DRIVE_STEP_UPDATE_CYL, DRIVE_STEP_FATAL_ERR);
          if (i == seek) {
             // Give time for track0 to change before we check
@@ -843,7 +1078,7 @@ static int analyze_seek(DRIVE_PARAMS *drive_params) {
             }
          } else {
             if (drive_at_track0()) {
-               msg(MSG_INFO, "Drive prematurely at track 0 after %d of %d steps testing %s seek\n", 
+               msg(MSG_INFO, "Drive prematurely at track 0 after %d of %d steps testing %s seek\n",
                   i, seek, step_speed_text(drive_params->step_speed));
                rc = 1;
             }
@@ -890,9 +1125,9 @@ static void analyze_disk_size(DRIVE_PARAMS *drive_params, int start_cyl,
 
    for (cyl = start_cyl + 1; cyl < MAX_CYL; cyl++) {
       if (cyl % 5 == 0)
-         msg(MSG_PROGRESS, "At cyl %d\r", cyl);
+         msg(MSG_PROGRESS, "analyze_disk_size (1139): At cyl %d\r", cyl);
 
-      rc = drive_step(drive_params->step_speed, 1, 
+      rc = drive_step(drive_params->step_speed, 1,
            DRIVE_STEP_UPDATE_CYL, DRIVE_STEP_RET_ERR);
       if (rc == DRIVE_STEP_TIMEOUT) {
          msg(MSG_INFO, "Max cylinder set from drive timeout on seek\n");
@@ -903,9 +1138,13 @@ static void analyze_disk_size(DRIVE_PARAMS *drive_params, int start_cyl,
       }
       drive_read_track(drive_params, cyl, head, deltas, max_deltas, 0);
 
-      mfm_init_sector_status_list(sector_status_list, drive_params->num_sectors);
+      init_sector_status_list(sector_status_list, drive_params->num_sectors);
       msg_mask_hold = msg_set_err_mask(decode_errors);
-      mfm_decode_track(drive_params, cyl, head, deltas, NULL, sector_status_list);
+      if (drive_params->is_rll) {
+         rll_decode_track(drive_params, cyl, head, deltas, NULL, sector_status_list);
+      } else {
+         mfm_decode_track(drive_params, cyl, head, deltas, NULL, sector_status_list);
+      }
       msg_set_err_mask(msg_mask_hold);
       any_header_found = 0;
       not_next_cyl = 0;
@@ -960,7 +1199,7 @@ static void analyze_disk_size(DRIVE_PARAMS *drive_params, int start_cyl,
 // cyl: cylinder to test
 // head: head to test
 // return: Number of matching formats found
-int analyze_headers(DRIVE_PARAMS *drive_params, void *deltas, 
+int analyze_headers(DRIVE_PARAMS *drive_params, void *deltas,
    int max_deltas, int cyl, int head)
 {
    int headers_match;
@@ -971,13 +1210,13 @@ int analyze_headers(DRIVE_PARAMS *drive_params, void *deltas,
    int format_count = 0;
    int data_matches;
 
-   headers_match = analyze_header(drive_params, cyl, head, deltas, max_deltas, 
+   headers_match = analyze_header(drive_params, cyl, head, deltas, max_deltas,
       drive_params_list, ARRAYSIZE(drive_params_list), match_count);
    if (headers_match != 0) {
       // If drive has separate data area check it
       for (i = 0; i < headers_match; i++) {
-         if (mfm_controller_info[drive_params_list[i].controller].separate_data) {
-            if (analyze_data(&drive_params_list[i], cyl, head, deltas, 
+         if (controller_info[drive_params_list[i].controller].separate_data) {
+            if (analyze_data(&drive_params_list[i], cyl, head, deltas,
                   max_deltas, match_count[i], &data_matches) > 1) {
                format_count++;
             }
@@ -992,14 +1231,14 @@ int analyze_headers(DRIVE_PARAMS *drive_params, void *deltas,
                msg(MSG_ERR_SERIOUS, "Found multiple matching header parameters. Will use largest matches or last if identical\n");
             }
             msg(MSG_ERR_SERIOUS, "Matches count %d for controller %s\nHeader CRC: ", data_matches,
-                mfm_controller_info[drive_params_list[i].controller].name);
+                controller_info[drive_params_list[i].controller].name);
             print_crc_info(&drive_params_list[i].header_crc, MSG_ERR_SERIOUS);
-            if (mfm_controller_info[drive_params_list[i].controller].separate_data) {
-               msg(MSG_ERR_SERIOUS, "Sector length %d\nData CRC: ", 
+            if (controller_info[drive_params_list[i].controller].separate_data) {
+               msg(MSG_ERR_SERIOUS, "Sector length %d\nData CRC: ",
                    drive_params_list[i].sector_size);
                print_crc_info(&drive_params_list[i].data_crc, MSG_ERR_SERIOUS);
             } else {
-               msg(MSG_ERR_SERIOUS, "Sector length %d\n", 
+               msg(MSG_ERR_SERIOUS, "Sector length %d\n",
                    drive_params_list[i].sector_size);
             }
             // Use sum of data & header match count

@@ -79,7 +79,7 @@ int drive_read_track(DRIVE_PARAMS *drive_params, int cyl, int head,
    int num_deltas;
 
    if (drive_params->tran_fd != -1) {
-      if (tran_file_seek_track(drive_params->tran_fd, cyl, head, 
+      if (tran_file_seek_track(drive_params->tran_fd, cyl, head,
             drive_params->tran_file_info)) {
          num_deltas = 0;
       } else {
@@ -87,7 +87,7 @@ int drive_read_track(DRIVE_PARAMS *drive_params, int cyl, int head,
                deltas, max_deltas, &cyl, &head);
       }
    } else {
-      if (emu_file_seek_track(drive_params->emu_fd, cyl, head, 
+      if (emu_file_seek_track(drive_params->emu_fd, cyl, head,
             drive_params->emu_file_info)) {
          num_deltas = 0;
       } else {

@@ -5,12 +5,12 @@
 // sync bit.
 //
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.
-// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from 
+// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from
 //    header
-// 05/20/24 DJG Added support for tracks formatted as bad track 
+// 05/20/24 DJG Added support for tracks formatted as bad track
 // 05/19/24 DJG Changed filter_state to not be static. Bad data can cause it
 //    to get stuck in state that will prevent decoding following tracks.
-// 05/19/24 DJG Added CONTROLLER_XEBEC_104527_C0_256B. 
+// 05/19/24 DJG Added CONTROLLER_XEBEC_104527_C0_256B.
 // 04/29/24 DJG Added TI_2223220 format
 // 08/31/23 DJG Fixed message wording
 // 03/11/23 DJG Improved EC1841 sector number decoding
@@ -18,7 +18,7 @@
 // 07/20/22 DJG Process sector if bytes decoded exactly matches needed
 // 03/17/22 DJG Handle large deltas and improved error message
 // 12/20/21 DJG Removed number of zero words before sector header test
-//    for EC1841 since one drive read didn't have enough zeros to 
+//    for EC1841 since one drive read didn't have enough zeros to
 //    have one 32 bit zero word.
 // 07/05/19 DJG Improved 3 bit head field handling
 // 04/22/18 DJG Added support for non 10 MHz bit rate
@@ -81,19 +81,6 @@
 
 #define DATA_IGNORE_BYTES 8
 
-// Type II PLL. Here so it will inline. Converted from continuous time
-// by bilinear transformation. Coefficients adjusted to work best with
-// my data. Could use some more work.
-static inline float filter(float v, float *delay)
-{
-   float in, out;
-                 
-   in = v + *delay;
-   out = in * 0.034446428576716f + *delay * -0.034124999994713f;
-   *delay = in;
-   return out;
-}
-
 // Decode bytes into header or sector data for the various formats we know about.
 // The decoded data will be written to a file if one was specified.
 // Since processing a header with errors can overwrite other good sectors this routine
@@ -136,14 +123,14 @@ static inline float filter(float v, float *delay)
 //
 //   Xebec S1420 winc/floppy controller with rev 104689B firmware
 //   ms3438_gimix_xe1420.td
-//      same as CONTROLLER_XEBEC_104786 except byte 7 flag is 0xc0. 
+//      same as CONTROLLER_XEBEC_104786 except byte 7 flag is 0xc0.
 //      Bit 4 is set on last cylinder. Unknow if bits 0 and 2 used.
-//      The offset from index of first header is 47,500 ns vs 125,000 for 
+//      The offset from index of first header is 47,500 ns vs 125,000 for
 //      512 byte sector 104786 and 104,000 for 256 byte sector XEBEC 1410A.
 //
 //   CONTROLLER_TI_2223220. Same as CONTROLLER_XEBEC_104527_512B except
 //   data compare byte is 0.
-//      
+//
 //   CONTROLLER_EC1841 (Also seems to be Xebec S1410)
 //      Same as XEBEC_104786 except data compare byte is 0x00, not 0xc9
 //      The second physical sector is actually sector 0 not what it says
@@ -261,20 +248,20 @@ SECTOR_DECODE_STATUS xebec_process_data(STATE_TYPE *state, uint8_t bytes[],
          alt_assigned = (bytes[7] & 0x01) != 0;
          is_alternate = (bytes[7] & 0x04) != 0;
          if (is_alternate) {
-            if (last_cyl_print != sector_status.cyl || 
+            if (last_cyl_print != sector_status.cyl ||
                   last_head_print != sector_status.head) {
                msg(MSG_INFO, "Alternate track set on cyl %d, head %d\n",
                   sector_status.cyl, sector_status.head);
                last_cyl_print = sector_status.cyl;
-               last_head_print = sector_status.head; 
+               last_head_print = sector_status.head;
             }
          }
-      
+
          // More stuff likely in here but not documented.
          if (drive_params->controller == CONTROLLER_XEBEC_S1420) {
-            compare_byte = 0xc0; 
+            compare_byte = 0xc0;
          } else {
-            compare_byte = 0x80; 
+            compare_byte = 0x80;
          }
          if ((bytes[7] & 0xe8) != compare_byte) {
             msg(MSG_ERR, "Header flag byte not %02x value: %02x on cyl %d head %d sector %d\n",
@@ -298,15 +285,15 @@ SECTOR_DECODE_STATUS xebec_process_data(STATE_TYPE *state, uint8_t bytes[],
          alt_assigned = (bytes[6] & 0x01) != 0;
          is_alternate = (bytes[6] & 0x04) != 0;
          if (is_alternate) {
-            if (last_cyl_print != sector_status.cyl || 
+            if (last_cyl_print != sector_status.cyl ||
                   last_head_print != sector_status.head) {
                msg(MSG_INFO, "Alternate track set on cyl %d, head %d\n",
                   sector_status.cyl, sector_status.head);
                last_cyl_print = sector_status.cyl;
-               last_head_print = sector_status.head; 
+               last_head_print = sector_status.head;
             }
          }
-      
+
          // More stuff likely in here but not documented.
          if ((bytes[6] & 0xea) != 0x80) {
             msg(MSG_ERR, "Header flag byte not expected value: %02x on cyl %d head %d sector %d\n",
@@ -355,15 +342,15 @@ SECTOR_DECODE_STATUS xebec_process_data(STATE_TYPE *state, uint8_t bytes[],
       // checksum at the end of the sector is zero
       if (alt_assigned) {
          if (crc64(&bytes[0], 9, &drive_params->header_crc) == 0) {
-            if (last_cyl_print != sector_status.cyl || 
+            if (last_cyl_print != sector_status.cyl ||
                   last_head_print != sector_status.head) {
-               msg(MSG_INFO,"cyl %d head %d assigned alternate cyl %d head %d (extract data fixed)\n", 
+               msg(MSG_INFO,"cyl %d head %d assigned alternate cyl %d head %d (extract data fixed)\n",
                   sector_status.cyl, sector_status.head,
                   (bytes[2] << 8) + bytes[3], bytes[4]);
                last_cyl_print = sector_status.cyl;
-               last_head_print = sector_status.head; 
+               last_head_print = sector_status.head;
             }
-            mfm_handle_alt_track_ch(drive_params, sector_status.cyl, 
+            mfm_handle_alt_track_ch(drive_params, sector_status.cyl,
                sector_status.head, (bytes[2] << 8) + bytes[3], bytes[4]);
          } else {
             sector_status.status |= SECT_BAD_DATA;
@@ -467,7 +454,7 @@ SECTOR_DECODE_STATUS xebec_decode_track(DRIVE_PARAMS *drive_params, int cyl,
    int sector_index = 0;
    // Count all the raw bits for emulation file
    int all_raw_bits_count = 0;
-   // First address mark time in ns 
+   // First address mark time in ns
    int first_addr_mark_ns = 0;
    // Number of zero words to see before checking for header
    int mark_num_zero;
@@ -482,7 +469,7 @@ SECTOR_DECODE_STATUS xebec_decode_track(DRIVE_PARAMS *drive_params, int cyl,
 
    raw_word = 0;
    nominal_bit_sep_time = 200e6 /
-       mfm_controller_info[drive_params->controller].clk_rate_hz;
+       controller_info[drive_params->controller].clk_rate_hz;
    max_delta = nominal_bit_sep_time * 22;
    avg_bit_sep_time = nominal_bit_sep_time;
    i = 1;
@@ -524,7 +511,7 @@ SECTOR_DECODE_STATUS xebec_decode_track(DRIVE_PARAMS *drive_params, int cyl,
                int_bit_pos, avg_bit_sep_time, track_time);
 #endif
          if (all_raw_bits_count + int_bit_pos >= 32) {
-            all_raw_bits_count = mfm_save_raw_word(drive_params, 
+            all_raw_bits_count = mfm_save_raw_word(drive_params,
                all_raw_bits_count, int_bit_pos, raw_word);
          } else {
             all_raw_bits_count += int_bit_pos;
@@ -594,18 +581,18 @@ if ((raw_word & 0xffff) == 0x4489) {
                   mfm_mark_header_location(all_raw_bits_count, raw_bit_cntr,
                       tot_raw_bit_cntr);
                   // Figure out the length of data we should look for
-                  bytes_crc_len = mfm_controller_info[drive_params->controller].header_bytes +
+                  bytes_crc_len = controller_info[drive_params->controller].header_bytes +
                         drive_params->header_crc.length / 8;
                   header_bytes_crc_len = bytes_crc_len;
                   bytes_needed = bytes_crc_len;
                   header_bytes_needed = bytes_needed;
                } else {
                   state = PROCESS_DATA;
-                  mfm_mark_data_location(all_raw_bits_count, raw_bit_cntr, 
+                  mfm_mark_data_location(all_raw_bits_count, raw_bit_cntr,
                      tot_raw_bit_cntr);
                   // Figure out the length of data we should look for
-                  bytes_crc_len = mfm_controller_info[drive_params->controller].data_header_bytes +
-                        mfm_controller_info[drive_params->controller].data_trailer_bytes +
+                  bytes_crc_len = controller_info[drive_params->controller].data_header_bytes +
+                        controller_info[drive_params->controller].data_trailer_bytes +
 
                         drive_params->sector_size +
                         drive_params->data_crc.length / 8;
@@ -675,11 +662,11 @@ if ((raw_word & 0xffff) == 0x4489) {
                         }
                      }
                      bytes[byte_cntr++] = decoded_word;
-                  } 
+                  }
                   if (byte_cntr == bytes_needed) {
                      mfm_mark_end_data(all_raw_bits_count, drive_params, cyl, head);
                      sector_status |= mfm_process_bytes(drive_params, bytes,
-                           bytes_crc_len, bytes_needed, &state, cyl, head, 
+                           bytes_crc_len, bytes_needed, &state, cyl, head,
                            &sector_index,
                            seek_difference, sector_status_list, 0);
                   }
@@ -700,7 +687,7 @@ if ((raw_word & 0xffff) == 0x4489) {
    if (state == PROCESS_DATA && sector_index <= drive_params->num_sectors) {
       float begin_time =
          ((bytes_needed - byte_cntr) * 16.0 *
-             1e9/mfm_controller_info[drive_params->controller].clk_rate_hz
+             1e9/controller_info[drive_params->controller].clk_rate_hz
              + first_addr_mark_ns) / 2 + drive_params->start_time_ns;
       msg(MSG_ERR, "Ran out of data byte %d on sector index %d, try adding --begin_time %.0f to mfm_read command line\n", byte_cntr,
          sector_index, round(begin_time / 1000.0) * 1000.0);

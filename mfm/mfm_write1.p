@@ -1,7 +1,7 @@
 #define CYCLE_CNTR r5
-// This code handles disk write getting the MFM bitstream from DDR 
+// This code handles disk write getting the MFM bitstream from DDR
 // memory and converting it to pulse width modulation (PWM) words for PRU 0.
-// 
+//
 // See comments in mfm_write0.p for more information.
 //
 // The write data goes through a circular buffer in shared memory
@@ -16,7 +16,7 @@
 // An entire cylinder is stored in the DDR memory. If the head select
 // lines are changed PRU 0 will tell us to restart sending data and we
 // will calculate the correct location to send the data from.
-// 
+//
 // TODO: Comments haven't all been fixed for the DMA changes.
 //
 // See mfm_write0.p for information on the transfer memory registers and
@@ -54,12 +54,12 @@
 #include "inc/cmd.h"
 #include "inc/cmd_write.h"
 
-// These are registers that are used globally. Check registers defined in 
+// These are registers that are used globally. Check registers defined in
 // cmd.h if looking for free registers.
 
    // Value 32
 #define CONST_32        r7.b3
-#define NEXT_DMA_WCOUNT r7.w0 
+#define NEXT_DMA_WCOUNT r7.w0
 #define NEXT_DMA_WCOUNT_MSB 15
    // r8 PRU1_BUF_STATE
    // r9 PRU0_BUF_STATE
@@ -108,7 +108,7 @@ START:
       // Enable OCP master port
    LBCO     r0, CONST_PRUCFG, 4, 4
       // Clear SYSCFG[STANDBY_INIT] to enable OCP master port
-   CLR      r0, r0, 4         
+   CLR      r0, r0, 4
    SBCO     r0, CONST_PRUCFG, 4, 4
 
       // Configure the programmable pointer register by setting c25_pointer[15:0]
@@ -116,8 +116,8 @@ START:
    MOV      r0, 0x00000020
    MOV      r4, PRU1_CONTROL | CTBIR
    SBBO     r0, r4, 0, 4
-      // Configure the programmable pointer register for PRU0 by setting 
-      // c31_pointer[15:0] field to 0x0010.  This will make C31 point to 
+      // Configure the programmable pointer register for PRU0 by setting
+      // c31_pointer[15:0] field to 0x0010.  This will make C31 point to
       // 0x80001000 (DDR memory). Configure the programmable pointer register
       // for PRU0 by setting c28_pointer[15:0] field to 0x0100.  This will
       //  make C28 point to 0x00010000 (PRU shared RAM).
@@ -125,7 +125,7 @@ START:
    MOV      r4, PRU1_CONTROL | CTPPR_0
    SBBO     r0, r4, 0, 4
 
-      // Configure the programmable pointer register for PRU0 by setting 
+      // Configure the programmable pointer register for PRU0 by setting
       // c31_pointer[15:0] field to 0x0010.  This will make C31 point to
       //  0x80001000 (DDR memory).
    MOV      r0, 0x00100000
@@ -153,29 +153,29 @@ START:
     // Setup EDMA region access for Shadow Region 1
     MOV  r4, 0
     // Bit mask for channel. Only works for channels < 32
-    SET  r4, EDMA_CHANNEL 
+    SET  r4, EDMA_CHANNEL
     MOV  R2, DRAE1
     SBBO r4, EDMA_BASE,  R2, 4 // Region 1
-   
+
     // Clear channel event from EDMA event registers
     MOV   r3, GLOBAL_SECR
-    SBBO  r4, EDMA_BASE,  r3, 4 
+    SBBO  r4, EDMA_BASE,  r3, 4
     MOV   r3, GLOBAL_ICR
-    SBBO  r4, EDMA_BASE,  r3, 4 
+    SBBO  r4, EDMA_BASE,  r3, 4
     MOV   r3, GLOBAL_IER
-    LBBO  r0, EDMA_BASE,  r3, 4 
+    LBBO  r0, EDMA_BASE,  r3, 4
     // Disable channel interrupt
     MOV   r3, GLOBAL_IECR
-    SBBO  r4, EDMA_BASE,  r3, 4 
+    SBBO  r4, EDMA_BASE,  r3, 4
     // Enable shadow 1 interrupt. Interrupts don't save time since
     // Syncronizing write to clear interrupt takes as much time as
     // just polling.
 //    MOV   r3, IESRL
-//    SBBO  r4, EDMA_BASE,  r3, 4 
+//    SBBO  r4, EDMA_BASE,  r3, 4
 
     // Clear event missed register
     MOV   r3, EMCR
-    SBBO  r4, EDMA_BASE,  r3, 4 
+    SBBO  r4, EDMA_BASE,  r3, 4
 
     // DCHMAP_# is no longer set by Linux post-3.x kernels
     // It is also harmless to set this in 3.x
@@ -192,7 +192,7 @@ START:
     MOV  r4, PARAM_OFFSET
     ADD  EDMA_PARAM_BASE, EDMA_PARAM_BASE, r4
         // Address of our channel PaRAM
-    ADD  EDMA_PARAM_BASE, EDMA_PARAM_BASE, EDMA_BASE  
+    ADD  EDMA_PARAM_BASE, EDMA_PARAM_BASE, EDMA_BASE
 
     // Build initial DMA descriptors. They will be modifed by dma routines
     // First entry OPT TCC = channel, enable transfer complete interrupt
@@ -261,7 +261,7 @@ START:
     ADD   EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32
 
       // Set multiply only mode. Only needs to be done once
-   MOV      r25, 0                
+   MOV      r25, 0
    XOUT     0, r25, 1
 
       // Local memory starts at address 0 in memory map
@@ -274,17 +274,17 @@ START:
 
 wait_read:
 //SET r30, 0
-   // Wait for PRU0, exit if requested. 
+   // Wait for PRU0, exit if requested.
    MOV      PRU1_STATE, STATE_READ_DONE
    MOV      PRU1_BUF_OFFSET, 0
-   XOUT     10, PRU1_BUF_STATE, 4 
+   XOUT     10, PRU1_BUF_STATE, 4
 wait_read_lp:
    XIN      10, PRU0_BUF_STATE, 4
    QBEQ     DONE, PRU0_STATE, STATE_EXIT
-   QBNE     wait_read_lp, PRU0_STATE, STATE_READ 
+   QBNE     wait_read_lp, PRU0_STATE, STATE_READ
 
    // Get track byte count and convert to words, all must be same
-   LBCO     TRACK_BYTES, CONST_PRURAM, PRU1_DRIVE0_TRACK_DATA_BYTES, 4 
+   LBCO     TRACK_BYTES, CONST_PRURAM, PRU1_DRIVE0_TRACK_DATA_BYTES, 4
 
    MOV      DDR_OFFSET, 0
    LSR      WORDS_LEFT, TRACK_BYTES, 2 // divide by 4 to get words
@@ -294,16 +294,16 @@ wait_read_lp:
       // Get current head from PRU 0
    LBCO     r29, CONST_PRURAM, PRU1_CUR_HEAD, 4
    MOV      r28, TRACK_BYTES
-   LBCO     r0, CONST_PRURAM, PRU1_DRIVE0_TRACK_HEADER_BYTES, 4 
+   LBCO     r0, CONST_PRURAM, PRU1_DRIVE0_TRACK_HEADER_BYTES, 4
    ADD      DDR_OFFSET, DDR_OFFSET,  r0  // Point after header
    ADD      r28, r28, r0
    MOV      r28, r28              // NOP, multiply has one cycle latency
    XIN      0, r26, 8             // Get multiply results (27,26=28*29)
-   ADD      DDR_OFFSET, DDR_OFFSET, r26  // Point to our head track 
+   ADD      DDR_OFFSET, DDR_OFFSET, r26  // Point to our head track
    MOV      TRACK_OFFSET, DDR_OFFSET
    MOV      TRACK_BIT, 0
 
-   
+
    MOV      PRU1_BUF_OFFSET, 0             // Start filling at first location
 
    MOV      r2, DMA_SIZE*2
@@ -340,14 +340,14 @@ bitloop:
    MOV      LAST_PRECOMP, 0
    JMP      storeval
 negval:
-   MOV      LAST_PRECOMP, -1 
+   MOV      LAST_PRECOMP, -1
 storeval:
    MOV      LAST_PRECOMP.b0, r0.b1
    MOV      r0.b1, 0
    SBCO     r0, CONST_PRUSHAREDRAM, PRU1_BUF_OFFSET, 4  // Store it
    ADD      PRU1_BUF_OFFSET, PRU1_BUF_OFFSET, 4         // Move to next location
       // Wrap if needed
-   AND      PRU1_BUF_OFFSET, PRU1_BUF_OFFSET, SHARED_PWM_READ_MASK   
+   AND      PRU1_BUF_OFFSET, PRU1_BUF_OFFSET, SHARED_PWM_READ_MASK
    XOUT     10, PRU1_BUF_STATE, 4          // Send our offset
    QBBC     noerr, r0, 24
    LBCO     r2, CONST_PRURAM, PRU1_BAD_PATTERN_COUNT, 4
@@ -373,7 +373,7 @@ shift_word2:
 
 read_next_word:
       // Get next word and update pointer
-   LBCO     WORD2, CONST_PRURAM, BUF_ADDR, 4 
+   LBCO     WORD2, CONST_PRURAM, BUF_ADDR, 4
    CALL     update_dma
 
       // If bitcount is -1 then shift done. Otherwise we need to
@@ -389,12 +389,12 @@ waitfree_setbit_count:
 waitfree:
       // Get current read location and state of pru 0. If no longer
       // read go handle. Wait for room
-   XIN      10, PRU0_BUF_STATE, 4        
-   QBNE     check_exit, PRU0_STATE, STATE_READ 
-   QBNE     bitloop, PRU0_BUF_OFFSET, PRU1_BUF_OFFSET 
+   XIN      10, PRU0_BUF_STATE, 4
+   QBNE     check_exit, PRU0_STATE, STATE_READ
+   QBNE     bitloop, PRU0_BUF_OFFSET, PRU1_BUF_OFFSET
       // Indicate buffer has data and PRU 0 can start PWM generation
    MOV      PRU1_STATE, STATE_READ_FILLED
-   XOUT     10, PRU1_BUF_STATE, 4                    
+   XOUT     10, PRU1_BUF_STATE, 4
    JMP      waitfree
 
       // Write a zero word to buffer to indicate end of data for track
@@ -418,7 +418,7 @@ finished_wait:
 finished_full:
       // Indicate buffer has data and PRU 0 can start PWM generation
    MOV      PRU1_STATE, STATE_READ_FILLED
-   XOUT     10, PRU1_BUF_STATE, 4                    
+   XOUT     10, PRU1_BUF_STATE, 4
    JMP      finished
 
    // See if switch to write or terminated was requested. If not restart read.
@@ -430,7 +430,7 @@ check_exit:
    MOV      r25, GPIO1 | GPIO_SETDATAOUT
    SBBO     r24, r25, 0, 4
    HALT
-              
+
    // Update memory pointers for word read and start DMA if needed
    // r26-29 modified from check_dma and start_dma
 update_dma:
@@ -482,7 +482,7 @@ addr_ok:
     LSL     EDMA_PARAM_BASE, EDMA_CHANNEL, 5 // channel*32
     MOV     r24, PARAM_OFFSET
     ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, r24
-    ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, EDMA_BASE  
+    ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, EDMA_BASE
 
     ADD     r24, r4, DDR_ADDR
     SBBO    r24, EDMA_PARAM_BASE,  SRC, 4
@@ -507,7 +507,7 @@ addr_ok:
     SBBO    r24, EDMA_PARAM_BASE, OPT, 4
     MOV     r24, r29
     MOV     r24.w2, 1
-    SBBO    r24, EDMA_PARAM_BASE, A_B_CNT, 4  
+    SBBO    r24, EDMA_PARAM_BASE, A_B_CNT, 4
 
     ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32     // Go to next entry
 
@@ -531,7 +531,7 @@ nowrap:
 
     MOV     r24, r2
     MOV     r24.w2, 1
-    SBBO    r24, EDMA_PARAM_BASE, A_B_CNT, 4  	
+    SBBO    r24, EDMA_PARAM_BASE, A_B_CNT, 4
 
     // Clear flag
     MOV     r24, 0

@@ -216,17 +216,17 @@ for (crc_info.poly = 0; crc_info.poly <= 0xffff; crc_info.poly++) {
      crc64o = crc64(bytes, sizeof(bytes), &crc_info);
      crc64o = crc64o ^ 0xff;
 //printf("crc %d %llx\n",sizeof(bytes), crc64o);
-     if (crc64o == 0x758a) 
+     if (crc64o == 0x758a)
         printf("Poly %llx\n",crc_info.poly);
      tot_crc += crc64o;
    gettimeofday(&tv_start, NULL);
    end = tv_start.tv_sec + tv_start.tv_usec / 1e6;
 }
 //exit(1);
-     
+
    //ecc();
   // return;
-  
+
    // This shows finding the CRC polynomial by modifying bytes. If the
    // CRC is in the header then the changing sector number field will give
    // you the data for this. If you can write data sectors or are lucky
@@ -234,7 +234,7 @@ for (crc_info.poly = 0; crc_info.poly <= 0xffff; crc_info.poly++) {
    // same other than the one byte.
    // See http://www.cosc.canterbury.ac.nz/greg.ewing/essays/CRC-Reverse-Engineering.html
    // Find a field that is 0 1, 2, 4, 8 etc. xor the CRC for the 0 with the
-   // 1, 2, 4 ... CRC. Then take example (CRC of 4) ^ (CRC of 2 >> 1) This 
+   // 1, 2, 4 ... CRC. Then take example (CRC of 4) ^ (CRC of 2 >> 1) This
    // should be 0 or the CRC polynomial. This assumes MSB first CRC order.
    poly = 0x00a00805;
    crc32b = 0;
@@ -255,7 +255,7 @@ for (crc_info.poly = 0; crc_info.poly <= 0xffff; crc_info.poly++) {
       }
       // This removes the effect of the CRC initialization value and
       // and xor/invert of the final CRC value
-      crc32 = crc_hld[0] ^ crc_hld[1];  
+      crc32 = crc_hld[0] ^ crc_hld[1];
       // Now this print should be either the polynomial or zero
       printf("%d %08x %08x\n", 1 << i, crc32, crc32 ^ (crc32b << 1));
       crc32b = crc32;
@@ -269,7 +269,7 @@ uint8_t buf3[] = {
  int loc = 10;
  uint32_t last_crc = 0;
  uint32_t first = 0;
-   
+
    memset(buf,0,sizeof(buf));
    buf[15] = 0x12;
       buf[loc] =  0x3;
@@ -311,7 +311,7 @@ return;
    crc32 = calc_crc32(0x20, crc32, poly);
    crc32 = calc_crc32(0x30, crc32, poly);
    crc32 = calc_crc32(0x40, crc32, poly);
-   printf("crc %08x %08x %08x\n", crc32, (int) ~crc_revbits(crc32, 32), 
+   printf("crc %08x %08x %08x\n", crc32, (int) ~crc_revbits(crc32, 32),
        (int) crc_revbits(crc32, 32));
    crc32 = calc_crc32(0x80, crc32, poly);
    printf("crc %x rev %x\n", crc32, crc_revbits(crc32, 32));
@@ -324,20 +324,20 @@ return;
    crc32 = calc_crc32r(0x80, crc32, poly);
    // If init is all ones we need to invert the final result.
    // if init 0 no invert needed. The revbits is still needed.
-   printf("crc %08x %08x %08x\n", crc32, (int) ~crc_revbits(crc32, 32), 
+   printf("crc %08x %08x %08x\n", crc32, (int) ~crc_revbits(crc32, 32),
        (int) crc_revbits(crc32, 32));
 
    // This doesn't work. Seems like calculating backwards should be doeable
    init = crc32b;
    crc32 = calc_crc32rb(0x80, init, poly);
-   printf("crcrb %08x %08x %08x\n", crc32, (int) ~crc_revbits(crc32, 32), 
+   printf("crcrb %08x %08x %08x\n", crc32, (int) ~crc_revbits(crc32, 32),
        (int) crc_revbits(crc32, 32));
 
    crc32 = 0;
    poly = 0x104c981;
    for (i = sizeof(bytes)-1; i >= 0; i--) {
       crc32 = calc_crc32r(bytes[i], crc32, poly);
-      printf("%d crc %08x %08x %08x\n", i, crc32, (int) ~crc_revbits(crc32, 32), 
+      printf("%d crc %08x %08x %08x\n", i, crc32, (int) ~crc_revbits(crc32, 32),
        (int) crc_revbits(crc32, 32));
    }
 
@@ -375,7 +375,7 @@ int crc32_init, xorout, match;
    data3[10] = crc32;
    printf("CRCx %x\n",crc32);
 #endif
-for (crc32_init = 0; crc32_init < 0x10000; crc32_init++) 
+for (crc32_init = 0; crc32_init < 0x10000; crc32_init++)
 //crc32_init = 0;
 {
 //crc32_init = 0x1234;
@@ -405,7 +405,7 @@ for (crc32_init = 0; crc32_init < 0x10000; crc32_init++)
 printf("data 4 crc %x size %d\n",crc32, ARRAYSIZE(data4)-2);
    if (match && ((crc32 ^ xorout) & 0xffff) == 0xe406) {
       printf("Match init %x %x\n",crc32_init, xorout);
-      if (xorout == 0) 
+      if (xorout == 0)
          printf("****\n");
    }
 //printf("Final crc %x\n",crc32);
@@ -446,7 +446,7 @@ void find_poly()
 // From {0xa1,0xfe,0x00,0x00,0x00,0x00,0x0f,0x9c,0xdb,0x18},
 // make CRC 0x0f9cdb18
 
-uint32_t crc_values[] = 
+uint32_t crc_values[] =
 //   {0x0f9cdb18, 0x0e981299, 0x0d95481a, 0x0b8ffd1c, 0x07ba9710, 0x1fd04308};
 
 {
@@ -472,10 +472,10 @@ uint32_t crc_values[] =
 #endif
 #if 0
 0xac2e,
-0xbc0f, 
-0x8c6c, 
+0xbc0f,
+0x8c6c,
 0xecaa,
-0x2d26,//8 
+0x2d26,//8
 #endif
 #if 1
 0x84c0,
@@ -519,7 +519,7 @@ uint32_t crc_values[] =
 0xa466a71e,
 0x07a6a400,
 0x4086aa39,
-0xcec6b64b 
+0xcec6b64b
 };
 #endif
 int i;

@@ -92,7 +92,7 @@ uint32_t msg_get_err_mask(void) {
 }
 
 // Malloc and print error if fail
-// 
+//
 void *msg_malloc(size_t size, char *msgstr) {
    void *ptr;
 

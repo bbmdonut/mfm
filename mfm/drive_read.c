@@ -3,7 +3,7 @@
 // drive_read_disk reads the disk drive.
 // drive_read_track read a track of deltas from a drive. It steps the
 //    head if necessary.
-// 
+//
 // The drive must be at track 0 on startup or drive_seek_track0 called.
 //
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.
@@ -48,6 +48,7 @@
 #include "crc_ecc.h"
 #include "emu_tran_file.h"
 #include "mfm_decoder.h"
+#include "rll_decoder.h"
 #include "cmd.h"
 #include "cmd_write.h"
 #include "deltas_read.h"
@@ -110,8 +111,8 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
          seek_len = 1;
          // Clear sector status here so we can see if different sectors
          // successfully read on different reads.
-         mfm_init_sector_status_list(sector_status_list, drive_params->num_sectors);
-         if (cyl >= drive_params->noretry_cyl || 
+         init_sector_status_list(sector_status_list, drive_params->num_sectors);
+         if (cyl >= drive_params->noretry_cyl ||
              head >= drive_params->noretry_head) {
             retries = 0;
          } else {
@@ -132,7 +133,7 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
                      drive_enable_recovery(1);
                      recovery_active = 1;
                   }
-                  drive_step(drive_params->step_speed, 1, 
+                  drive_step(drive_params->step_speed, 1,
                      DRIVE_STEP_NO_UPDATE_CYL, DRIVE_STEP_FATAL_ERR);
                } else {
                   if (cyl + seek_len >= drive_params->num_cyl) {
@@ -143,9 +144,9 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
                   }
                   //printf("seeking %d %d %d\n",err_cnt, seek_len, seek_len + cyl);
                   if (clip_seek_len != 0) {
-                     drive_step(drive_params->step_speed, clip_seek_len, 
+                     drive_step(drive_params->step_speed, clip_seek_len,
                         DRIVE_STEP_UPDATE_CYL, DRIVE_STEP_FATAL_ERR);
-                     drive_step(drive_params->step_speed, -clip_seek_len, 
+                     drive_step(drive_params->step_speed, -clip_seek_len,
                         DRIVE_STEP_UPDATE_CYL, DRIVE_STEP_FATAL_ERR);
                   }
                   if (seek_len < 0) {
@@ -180,8 +181,13 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
 
             drive_read_track(drive_params, cyl, head, deltas, max_deltas, 0);
 
-            sector_status = mfm_decode_track(drive_params, cyl, head,
-               deltas, &seek_difference, sector_status_list);
+	    if (drive_params->is_rll) {
+		   sector_status = rll_decode_track(drive_params, cyl, head,
+		      deltas, &seek_difference, sector_status_list);
+	    } else {
+         sector_status = mfm_decode_track(drive_params, cyl, head,
+            deltas, &seek_difference, sector_status_list);
+	    }
 
             // See if sector list shows any with errors. The sector list
             // contains the information on the best read for each sector so
@@ -200,7 +206,7 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
                if (err_cnt < retries) {
                   msg(MSG_ERR, "Retrying seek cyl %d, cyl off by %d\n", cyl,
                         seek_difference);
-                  drive_step(drive_params->step_speed, seek_difference, 
+                  drive_step(drive_params->step_speed, seek_difference,
                      DRIVE_STEP_NO_UPDATE_CYL, DRIVE_STEP_FATAL_ERR);
                }
             }
@@ -213,12 +219,12 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
          if (recovery_active) {
            drive_enable_recovery(0);
            // My ST225 doesn't follow the manual behavior of inactivating seek
-           // complete after recovery goes inactive while it repositions the 
+           // complete after recovery goes inactive while it repositions the
            // heads. The heads seem to be moving since I get data from several
-           // cylinders. If a step is done the drive gets confused and needs 
+           // cylinders. If a step is done the drive gets confused and needs
            // to be power cylcled. This delay seems to make it work.
            usleep(25000);
-           // Wait for seek complete 
+           // Wait for seek complete
            if (pru_exec_cmd(CMD_CHECK_READY, 0)) {
               drive_print_drive_status(MSG_FATAL, drive_get_drive_status());
               exit(1);
@@ -239,7 +245,7 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
 
    mfm_decode_done(drive_params);
 
-   printf("Track read time in ms min %f max %f avg %f\n", min * 1e3, 
+   printf("Track read time in ms min %f max %f avg %f\n", min * 1e3,
          max * 1e3, tot * 1e3 / count);
 
    deltas_stop_thread();
@@ -258,11 +264,11 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
 //   otherwise write fault is fatal error.
 //
 // return non zero if write fault present and return_write_fault true.
-int drive_read_track(DRIVE_PARAMS *drive_params, int cyl, int head, 
+int drive_read_track(DRIVE_PARAMS *drive_params, int cyl, int head,
       void *deltas, int max_deltas, int return_write_fault) {
 
    if (cyl != drive_current_cyl()) {
-      drive_step(drive_params->step_speed, cyl - drive_current_cyl(), 
+      drive_step(drive_params->step_speed, cyl - drive_current_cyl(),
          DRIVE_STEP_UPDATE_CYL, DRIVE_STEP_FATAL_ERR);
    }
 

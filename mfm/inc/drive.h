@@ -1,18 +1,37 @@
-/*
- * drive.h
- *
- *  Created on: Dec 23, 2013
- *      Author: djg
- */
-
 #ifndef DRIVE_H_
 #define DRIVE_H_
+
+//
+// drive.h
+//
+//  Created on: Dec 23, 2013
+//      Author: DJG
+//
+// 08/06/2025 BBMD Added support functions for external stepper control,
+//    brought in from the customized build by DJG
+//
+// This file is part of MFM disk utilities.
+//
+// MFM disk utilities is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// MFM disk utilities is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with MFM disk utilities.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 void drive_select(int drive);
 void drive_set_head(int head);
 void drive_seek_track0(void);
 void drive_setup(DRIVE_PARAMS *drive_params);
 void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas);
+void ext_stepper_drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas);
 int drive_at_track0(void);
 uint32_t drive_get_drive_status(void);
 void drive_print_drive_status(int level, uint32_t status);
@@ -36,6 +55,8 @@ double drive_rpm(void);
 int drive_step(int seek_speed, int steps, int update_cyl, int err_fatal);
 int drive_current_cyl(void);
 int drive_read_track(DRIVE_PARAMS *drive_params, int cyl, int head,
+      void *deltas, int max_deltas, int return_write_fault);
+int ext_stepper_drive_read_track(DRIVE_PARAMS *drive_params, int cyl, int head,
       void *deltas, int max_deltas, int return_write_fault);
 void drive_initialize(void);
 int drive_get_board_revision(void);

@@ -92,7 +92,7 @@ START:
    SBBO     r0, r1, 0, 4
 
    // Enable cycle counter. We use this for delays
-   MOV      r3, PRU0_CONTROL    
+   MOV      r3, PRU0_CONTROL
    LBBO     r2, r3, 0, 4            // Read reg
    SET      r2, r2, 3
    SBBO     r2, r3, 0, 4            // Write reg
@@ -112,12 +112,12 @@ START:
    SBCO     r0, CONST_PRURAM, PRU0_CMD, 4
 wait_cmd:
    // Clear timer to prevent it from from overflowing and stopping
-   MOV      r2,0              
+   MOV      r2,0
    SBBO     r2, CYCLE_CNTR, 0, 4
    // Store drive status for ARM
    CALL     get_status
    // Get command and branch to correct routine
-   LBCO     r1, CONST_PRURAM, PRU0_CMD, 4 
+   LBCO     r1, CONST_PRURAM, PRU0_CMD, 4
    QBEQ     read_track, r1, CMD_READ_TRACK
    QBEQ     seek, r1, CMD_SEEK_FAST
    QBEQ     slow_seek, r1, CMD_SEEK_SLOW
@@ -136,13 +136,13 @@ read_track:
 
    // R21 will be Offset in DDR buffer to write to. PRU0_WRITE_PTR
    // is the word the ARM reads to find how many deltas have been written
-   MOV      r21, 0                   
-   SBCO     r21, CONST_PRURAM, PRU0_WRITE_PTR, 4   // write ptr 
+   MOV      r21, 0
+   SBCO     r21, CONST_PRURAM, PRU0_WRITE_PTR, 4   // write ptr
 
    // Pointer updated, let ARM know it can read it now
    MOV      r1, CMD_STATUS_READ_STARTED
-   SBCO     r1, CONST_PRURAM, PRU0_CMD, 4 
- 
+   SBCO     r1, CONST_PRURAM, PRU0_CMD, 4
+
    // Now find start of track. Start is falling edge of index signal
    MOV      r3, INDEX_TIMEOUT
    MOV      r2, 0
@@ -196,7 +196,7 @@ start_read:
 
    // 0 if index has gone back high, one if index hasn't gone back high
    // 2 or more is extra time after index we continue capturing data
-   MOV      r5, 1 
+   MOV      r5, 1
 
    // We store the four capture register values in R10-R13 then
    // write them all at once to DDR. This improved transfer rate.
@@ -212,7 +212,7 @@ caploop:
 no_overrun:
    // Clear flag for any CAP register we have processed (r1). We
    // must process them in order
-   XOR      r2, r1, 0x1e             
+   XOR      r2, r1, 0x1e
    AND      r0, r0, r2
    QBBC     nxt1, r0, 1              // cap1 doesn't have data?
    LBCO     r10, CONST_ECAP, 0x8, 4  // Get count
@@ -264,7 +264,7 @@ nxt3b:
    ADD      r21, r21, 8              // inc ptr
    // Stop if we will go past end of memory segment
    QBGT     overflow, r22, r21
-   SBCO     r21, CONST_PRURAM, PRU0_WRITE_PTR, 4   // write ptr 
+   SBCO     r21, CONST_PRURAM, PRU0_WRITE_PTR, 4   // write ptr
    MOV      r1, 0                    // No data stored
    JMP      caploop
    // Check if we are done
@@ -272,10 +272,10 @@ nxt4:
    QBLE     chk_time, r5, 2          // Need end capture delay?
    QBBC     chk_ignore, r31, R31_INDEX_BIT   // Index low?
    MOV      r5, 0       // Index has gone back high
-   JMP      caploop 
+   JMP      caploop
 chk_ignore:
       // Don't check for index low if we haven't seen high
-   QBEQ     caploop, r5, 1      
+   QBEQ     caploop, r5, 1
    MOV      r2, 0
    SBBO     r2, CYCLE_CNTR, 0, 4           // Clear timer
    LBCO     r5, CONST_PRURAM, PRU0_START_TIME_CLOCKS, 4   // Get delay time
@@ -297,21 +297,21 @@ read_done:
    QBBC     store, r1, 2            // r10.w2 used?
    ADD      r2,r2, 2
    QBBC     store, r1, 3            // r11.w0 used?
-   ADD      r2,r2, 2               
+   ADD      r2,r2, 2
      // Don't need to check r11.w2, it can't be dirty by logic
 store:
      // write times to ddr. We may write more data than needed but count will
      // be updated properly
-   SBBO     r10, r23, r21, 8        
+   SBBO     r10, r23, r21, 8
    ADD      r21, r21, r2            // Inc pointer
-   SBCO     r21, CONST_PRURAM, PRU0_WRITE_PTR, 4   // write ptr 
+   SBCO     r21, CONST_PRURAM, PRU0_WRITE_PTR, 4   // write ptr
 no_queued:
    SBCO     r7, CONST_PRURAM, PRU0_CMD, 4 // Indicate command completed ok
-   JMP      wait_cmd   
+   JMP      wait_cmd
 overflow:
    MOV      r1, CMD_STATUS_READ_OVERFLOW
    SBCO     r1, CONST_PRURAM, PRU0_CMD, 4 // Error
-   JMP      wait_cmd   
+   JMP      wait_cmd
 
 #include "drive_operations.p"
 

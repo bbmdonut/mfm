@@ -5,10 +5,10 @@
 // TODO Make handle more complex interleave like RD53 (cyl to cyl is 8, track
 // to track is -1 or 16)
 //
-// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from 
+// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from
 //    header
 // 10/09/23 Remove interleave as option so ext2emu can be parsed better
-// 09/17/23 Changed to calling pru_exec_program to set correct path for file 
+// 09/17/23 Changed to calling pru_exec_program to set correct path for file
 // to load and board_set_restore_max_cpu_speed to have one copy
 // 01/20/21 DJG Fixed call
 // 07/07/19 DJG Turn off recovery line when exiting
@@ -70,6 +70,7 @@
 
 #include "cmd.h"
 
+#include "mcp4725.h"
 // This routine is for cleaning up when shutting down. It is installed as an
 // atexit routine and called by SIGINT handler.
 void shutdown(void)
@@ -87,6 +88,12 @@ void shutdown(void)
    // Turn off selected light on drive
    drive_select(0);
 
+// TODO (BBMD): Add config option to specify stepper type
+// and utilize here
+#if 0
+   // Turn off DAC drive
+   mcp4725_disable_dac(1);
+#endif
    pru_restart(0);
 
    deltas_stop_thread();
@@ -115,6 +122,20 @@ int main(int argc, char *argv[])
    char *cmdline;
    int max_deltas;
 
+// TODO (BBMD): Add config for this
+#if 0
+   // Turn off DAC drive
+   mcp4725_disable_dac(1);
+#endif
+
+#if 0
+   // Output voltage for testing
+   mcp4725_open();
+   mcp4725_disable_dac(0);
+   mcp4725_set_dac( round(4095 * 5 / 11.4) , MCP4725_PD_NONE, 0);
+   printf("DAC SET\n");
+   sleep(100);
+#endif
    board_initialize();
 
    // Find out what we should do
@@ -133,6 +154,20 @@ int main(int argc, char *argv[])
       exit(1);
    }
 
+   // Determine if we want to use an external stepper controller. This is used
+   // for more low-level data recovery, when head alignment issues have been
+   // identified by the user.
+   if (drive_params.ext_stepper)
+   {
+      // Initialize the stepper controller.
+      // TODO (BBMD): Rename the "settings" structure to something more intuitive.
+      drive_params.settings = PRODRIVER();
+      pd_begin();
+   } else {
+      // Since we don't need external control, just keep this NULL.
+      drive_params.settings = NULL;
+   }
+
    // Initialize PRU
    ddr_mem_size = pru_setup(1);
    if (ddr_mem_size == -1) {
@@ -140,12 +175,25 @@ int main(int argc, char *argv[])
    }
 
    // And start our code
-   if (pru_exec_program(0, "prucode0.bin") != 0) {
-      msg(MSG_FATAL, "Unable to execute prucode0.bin\n");
-      exit(1);
+
+   // We have two different sets of PRU code, depending
+   // on if we're using external stepping (in this case,
+   // the PRU function 'wait_ready' ignores the checks
+   // for ready, seek complete, and drive select)
+   if (drive_params.ext_stepper)
+   {
+	   if (pru_exec_program(0, "prucode0_ext_stepper.bin") != 0) {
+	      msg(MSG_FATAL, "Unable to execute prucode0_ext_stepper.bin\n");
+	      exit(1);
+	   }
+   } else {
+	   if (pru_exec_program(0, "prucode0.bin") != 0) {
+	      msg(MSG_FATAL, "Unable to execute prucode0.bin\n");
+	      exit(1);
+	   }
    }
 
-   pru_write_word(MEM_PRU0_DATA, PRU0_START_TIME_CLOCKS, 
+   pru_write_word(MEM_PRU0_DATA, PRU0_START_TIME_CLOCKS,
       drive_params.start_time_ns / CLOCKS_TO_NS);
 
    pru_write_word(MEM_PRU0_DATA, PRU0_BOARD_REVISION, board_get_revision());
@@ -191,15 +239,29 @@ int main(int argc, char *argv[])
    drive_params.cmdline = msg_malloc(strlen(cmdline)+1,"main cmdline");
    strcpy(drive_params.cmdline, cmdline);
    if (drive_params.extract_filename != NULL && !drive_params.xebec_skew &&
-     (mfm_controller_info[drive_params.controller].flag & FLAG_XEBEC)) {
+     (controller_info[drive_params.controller].flag & FLAG_XEBEC)) {
       printf("Check extracted data file. Some Xebec controllers need --xebec_skew option\n  to generate valid extracted data file\n");
    }
-       
+
 
    if (read) {
       drive_setup(&drive_params);
-      drive_read_disk(&drive_params, deltas, max_deltas);
+      // If we are using an external stepper controller, head positioning
+      // is handled much differently. Becasue of this, we use a different
+      // version of the routine to read the disk contents.
+      if (drive_params.ext_stepper)
+      {
+         ext_stepper_drive_read_disk(&drive_params, deltas, max_deltas);
+      } else {
+         drive_read_disk(&drive_params, deltas, max_deltas);
+      }
    }
+
+// TODO (BBMD): Again, add a config option for this type of stepper control
+#if 0
+   // Turn off DAC drive
+   mcp4725_disable_dac(1);
+#endif
 
    pru_exec_cmd(CMD_EXIT, 0);
    drive_select(0);

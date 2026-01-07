@@ -1,6 +1,6 @@
 // This module is the routines needed to write a MFM disk. It does not
 // attempt to handle bad locations on the disk. It does not have
-// proper command line processing. Edit main. 
+// proper command line processing. Edit main.
 //
 // Copyright 2021 David Gesswein.
 // This file is part of MFM disk utilities.
@@ -18,7 +18,7 @@
 // You should have received a copy of the GNU General Public License
 // along with MFM disk utilities.  If not, see <http://www.gnu.org/licenses/>.
 //
-// 09/17/23 Changed to calling pru_exec_program to set correct path for file 
+// 09/17/23 Changed to calling pru_exec_program to set correct path for file
 //          to load and board_set_restore_max_cpu_speed to have one copy
 // 09/12/23 JST Changes to support 5.10 kernel and --sync option
 // 05/05/23 GL  Fix by Gleb Larionov for hang on first write
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
       exit(1);
    }
 
-   pru_write_word(MEM_PRU0_DATA, PRU0_START_TIME_CLOCKS, 
+   pru_write_word(MEM_PRU0_DATA, PRU0_START_TIME_CLOCKS,
       drive_params.start_time_ns / CLOCKS_TO_NS);
    pru_write_word(MEM_PRU0_DATA, PRU0_BOARD_REVISION, board_get_revision());
    pru_write_word(MEM_PRU1_DATA,PRU1_DRIVE0_TRACK_HEADER_BYTES,

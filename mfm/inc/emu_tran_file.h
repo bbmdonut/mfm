@@ -4,7 +4,7 @@
  * 09/12/23 JST Changes to support 5.10 kernel and --sync option
  * 11/09/14 DJG Added new function prototypes for emulator file
  * 	buffering and structure changes for buffering and other new
- *     command line options	
+ *     command line options
  *  Created on: Jan 25, 2014
  *      Author: djg
  */
@@ -54,7 +54,7 @@ typedef struct tran_file_info {
 } TRAN_FILE_INFO;
 
 int emu_file_write_header(char *fn, int num_cyl, int num_head, char *cmdline,
-      char *note, uint32_t sample_rate, uint32_t start_time_ns, 
+      char *note, uint32_t sample_rate, uint32_t start_time_ns,
       uint32_t track_bytes);
 int emu_file_read_header(char *fn, EMU_FILE_INFO *emu_file_info_out,
       int rewrite, int direct);

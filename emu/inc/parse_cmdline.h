@@ -29,7 +29,7 @@ typedef struct {
 
 #define CONTROLLER_DEFAULT 1
 #define CONTROLLER_CROMEMCO 2
-DEF_EXTERN CONTROLLER mfm_controller_info[]
+DEF_EXTERN CONTROLLER controller_info[]
 #ifdef DEF_DATA
    = {
      {"Default", CONTROLLER_DEFAULT},

@@ -2,7 +2,7 @@
 //    is present. Also sets CPU speed for beaglebone
 // board_initialize sets up this module.
 // board_get_revision returns the revision of the MFM emulator board
-// 
+//
 // 09/17/2023 DJG Moved set_restore_max_cpu_speed to this file as board_
 //   to only have one copy
 // 03/22/2019 DJG Added REV C support
@@ -44,7 +44,7 @@
 #define ARRAYSIZE(x) (sizeof(x) / sizeof(x[0]))
 
 // 0 = first/A, 1 = B. Used to index arrays so can't change encoding
-static int board_revision = -1; 
+static int board_revision = -1;
 
 // Perform any setup needed by this module. Call once before any other
 // routine
@@ -56,14 +56,14 @@ void board_initialize(void) {
    if (board_revision == -1) {
          // Default is A
       board_revision = 0;
-      for (i = 0; i < ARRAYSIZE(pins); i++) { 
+      for (i = 0; i < ARRAYSIZE(pins); i++) {
          sprintf(str, "/sys/class/gpio/gpio%d/value", pins[i]);
          fd = open(str, O_RDONLY);
          if (fd < 0) {
             msg(MSG_FATAL, "Unable to open pin %d, did you run the setup script?\n", pins[i]);
             exit(1);
          }
-         // Pin grounded to indicate version 
+         // Pin grounded to indicate version
          pread(fd, str, sizeof(str), 0);
          close(fd);
          if (str[0] == '0') {
@@ -75,7 +75,7 @@ void board_initialize(void) {
    msg(MSG_INFO, "Board revision %c detected\n", 'A' + board_revision);
 }
 
-// Return board revision 
+// Return board revision
 int board_get_revision(void) {
    return board_revision;
 }

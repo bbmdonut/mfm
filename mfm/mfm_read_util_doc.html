@@ -17,7 +17,7 @@
 </head>
 <body lang="en-US" link="#000080" vlink="#800000" dir="ltr"><p class="hanging-indent" style="margin-left: 0.2in; margin-bottom: 0in">
 mfm_read can analyze and/or read a MFM disk and write raw MFM
-transition data, decoded data, or emulation data to files.  
+transition data, decoded data, or emulation data to files.
 </p>
 <p class="hanging-indent" style="margin-left: 0.2in">mfm_util can
 read transition and convert to emulation or decoded data. It can also
@@ -48,11 +48,24 @@ polynomial length, maximum ECC span.</p>
 <p style="margin-bottom: 0in">--drive  -d #</p>
 <p style="margin-left: 0.5in; margin-bottom: 0in">Drive number to
 select for reading. Only valid for read command. Drives are number 1
-to 4. 
-</p>
+to 4.</p>
 <p style="margin-bottom: 0in">--emulation_file -m filename</p>
 <p style="margin-left: 0.5in; margin-bottom: 0in">File name to write
 emulation bit data to. No file created if not specified</p>
+<p style="margin-bottom: 0in">--external_stepper -X</p>
+<p style="margin-left: 0.5in; margin-bottom: 0in">This is used to
+override the drive’s normal head positioning logic, and use an
+external stepper motor controller connected directly to the drive’s
+motor control wiring. This can be used to provide for micro-stepping
+the head "between" tracks, allowing for a higher probability to
+recover data from drives with head alignment issues. This is an
+advanced operational mode that requires additional hardware
+expansion; for more information, see <a href="https://www.pdp8online.com/mfm/microstep/index.shtml">https://www.pdp8online.com/mfm/microstep/index.shtml</a>
+<br/><br/>
+NOTE: While the MCP 4725 DAC code is present, it has not been
+fully-integrated with this build. The TC78H670FTG interface has been
+used successfully with this build during development and testing.
+</p>
 <p style="margin-bottom: 0in">--extracted_data_file  -e filename</p>
 <p style="margin-left: 0.5in; margin-bottom: 0in">File name to write
 decoded data to. No file created if not specified. Data is always in
@@ -83,7 +96,7 @@ performed on the extra heads.</p>
 between expected cylinders and actual cylinder. The primary use is to
 process files from disks read without decoding the data (no analyze)
 that had seek errors. It may also be useful with drives that have
-seek problems that the attempt to correct for makes things worse. 
+seek problems that the attempt to correct for makes things worse.
 Error messages may be confusing since some use expected cylinder
 which won't match actual cylinder. If same cylinder read twice when
 seek was attempted good sectors may be overwritten with bad data from
@@ -115,6 +128,14 @@ area length in bytes. Default is 512.</p>
 <p style="margin-left: 0.5in; margin-bottom: 0in">The number of
 sectors per track, lowest sector number. Lowest sector number is
 normally 0 or 1 depending on the controller.</p>
+<p style="margin-bottom: 0in">--step -S #</p>
+<p style="margin-left: 0.5in; margin-bottom: 0in">When using a
+secondary head stepper controller, this specifies a number of tracks
+that the heads should be moved by before starting the data
+read/analysis process. This is used due to the inability to
+automatically return to track 0 when external stepper control is
+used, and the heads are positioned elsewhere at the beginning of an
+operation.</p>
 <p style="margin-bottom: 0in">--track_words -w #</p>
 <p style="margin-left: 0.49in; margin-bottom: 0in">The number of 32
 bit words of track data to use for emulator file. If this parameter
@@ -172,7 +193,7 @@ Error Correcting Code (ECC) parameters consists of a initial value
 which the CRC register is set to before starting the CRC, the CRC bit
 length, a CRC polynomial, and a maximum ECC span. The ECC span should
 be zero if ECC correction should not be used.</p>
-<p style="margin-bottom: 0in"> 
+<p style="margin-bottom: 0in">
 </p>
 <p style="margin-bottom: 0in">It is advisable to generate a
 transition file when reading important disks since it may be possible
@@ -193,7 +214,7 @@ correction.</p>
 <p style="margin-bottom: 0in">Emulation file is for use by the
 mfm_emu program to emulate a disk drive.  For mfm_read it is an
 output. For mfm_util it is an output if a transitions file is
-specified otherwise it is an input. 
+specified otherwise it is an input.
 </p>
 <p style="margin-bottom: 0in"><br/>
 
@@ -279,14 +300,14 @@ decoding (change parameters to match your drive)</p>
 transitions data if analyze determined decoding parameters or they
 were manually specifed when file created:</p>
 <p style="margin-bottom: 0in">   mfm_util --transitions_file raw_out2
---extracted_data_file /tmp/decoded_out 
+--extracted_data_file /tmp/decoded_out
 </p>
 <p style="margin-bottom: 0in">Otherwise specify parameters for your
 drive like:</p>
 <p style="margin-bottom: 0in">   mfm_util --sectors 17,0 --heads 6
---cylinders 640 --header_crc 0x2605fb9c,0x104c981,32,0 --data_crc 
-0xd4d7ca20,0x104c981,32,0 --format OMTI_5510 --sector_length 512 
---transitions_file raw_out2 --extracted_data_file /tmp/decoded_out 
+--cylinders 640 --header_crc 0x2605fb9c,0x104c981,32,0 --data_crc
+0xd4d7ca20,0x104c981,32,0 --format OMTI_5510 --sector_length 512
+--transitions_file raw_out2 --extracted_data_file /tmp/decoded_out
 </p>
 <p style="margin-bottom: 0in"><br/>
 
@@ -349,17 +370,17 @@ which generated confusing messages.</i></p>
 </p>
 <p style="margin-bottom: 0in">No sectors readable from cylinder 640</p>
 <p style="margin-bottom: 0in">Stopping end of disk search due to two
-unreadable tracks in a row 
+unreadable tracks in a row
 </p>
 <p style="margin-bottom: 0in">Number of cylinders 640, 33.4 MB</p>
 <p style="margin-bottom: 0in">    <i>Informational.  The method we
 used to determine the number of cylinders and size determined.</i></p>
-<p style="margin-bottom: 0in">Command line to read disk: 
+<p style="margin-bottom: 0in">Command line to read disk:
 </p>
 <p style="margin-bottom: 0in">--sectors 17,0 --heads 6 --cylinders
-640 --header_crc 0x2605fb9c,0x104c981,32,0 --data_crc 
+640 --header_crc 0x2605fb9c,0x104c981,32,0 --data_crc
 0xd4d7ca20,0x104c981,32,0 --format OMTI_5510 --sector_length 512
---retries 50 --drive 2 
+--retries 50 --drive 2
 </p>
 <p style="margin-left: 0.1in; margin-bottom: 0in"><i>This is the
 options needed to decode the disk with mfm_read. For mfm_util remove
@@ -375,7 +396,7 @@ analysis since it can make mistakes.</p>
 </p>
 <p style="margin-bottom: 0in">Decoding messages:</p>
 <p style="margin-bottom: 0in">AM33XX</p>
-<p style="margin-bottom: 0in">File prucode0.bin open passed 
+<p style="margin-bottom: 0in">File prucode0.bin open passed
 </p>
 <p style="margin-bottom: 0in">   <i>Informational messages from PRU
 access routines in mfm_read.</i></p>
@@ -394,7 +415,7 @@ the data will be all zero. If –ignore_seek_errors specified it may
 print cylinder 22/21 indicating expected cylinder 22 but found header
 indicating cylinder 21 read.</i></p>
 <p style="margin-bottom: 0in">ECC Corrections on cylinder 56 head 5:
-1(2) 13(4) 15(1H) 
+1(2) 13(4) 15(1H)
 </p>
 <p style="margin-left: 0.12in; margin-bottom: 0in"><i>Informational.
 Indicates that for the specified track that data of sectors 1 and 13
@@ -418,11 +439,11 @@ recovered good data by retrying the read.</i></p>
 <p style="margin-bottom: 0in">   <i>Informational. Should match what
 was specified</i></p>
 <p style="margin-bottom: 0in">Expected 65280 sectors got 65276 good
-sectors, 0 bad header, 4 bad data 
+sectors, 0 bad header, 4 bad data
 </p>
 <p style="margin-bottom: 0in">0 sectors marked bad or spare</p>
 <p style="margin-bottom: 0in">11 sectors corrected with ECC. Max bits
-in burst corrected 5 
+in burst corrected 5
 </p>
 <p style="margin-left: 0.13in; margin-bottom: 0in; background: transparent; page-break-before: auto">
 <i>S</i><i>ummary of errors during the read. We have 4 sectors with

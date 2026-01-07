@@ -1,4 +1,4 @@
-This code is intended to be used to read MFM disks using a beaglebone
+This code is intended to be used to read MFM/RLL disks using a Beaglebone
 board with a disk interface daughter card. A makefile is provided to
 build mfm_read and mfm_util on the beaglebone.
 
@@ -45,9 +45,11 @@ cmd.h		The PRU code commands, return status, and various memory
 Used by both
 crc_ecc.c	Routines for performing CRC and ECC operations
 mfm_decoder.c	Routines for performing the MFM decoding
+rll_decoder.c	Routines for performing common RLL functions
 msg.c		Routines for printing messages
 parse_cmdline.c	Routines for parsing and printing the command line options
-wd_mfm_decoder.c	Routines for processing "Western Digital" format
+wd_mfm_decoder.c	Routines for processing "Western Digital" MFM formats
+wd_rll_decoder.c	Routines for processing "Western Digital" RLL formats
 xebec_mfm_decoder.c	Routines for processing Xebec format tracks
 emu_tran_file.c Routines for reading and writing emulation and transition files
 mfm_decoder.h	Defines for data structures used by the code
@@ -64,7 +66,7 @@ for decoding the track. It can either be set from the command line or by
 analyze_disk routine. Some decoding information which is hardcoded in the
 routines might be better moved into the structure.
 
-See emu_tran_file.c header for data file formats. 
+See emu_tran_file.c header for data file formats.
 
 The decoded disk contents is the concatenated sector data. It is in the
 order specified in the sector headers, not the physical order on disk.

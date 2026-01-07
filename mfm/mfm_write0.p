@@ -1,7 +1,7 @@
 #define MEASURE_QUEUE_FULL_WRITEx
 #define MEASURE_QUEUE_FULL_READx
 //
-// This code is for writing a MFM disk. 
+// This code is for writing a MFM disk.
 // Comments below are for emulator code where this was lifed from.
 // Comments are not accurate anymore.
 //
@@ -10,7 +10,7 @@
 // PRU1 converts that data to PWM control values which this PRU writes
 // to the ECAP peripheral to generate the MFM waveform. This PRU also handles
 // the control signals from the disk controller as discussed below.
-// 
+//
 // The MFM bits the emulator processes are the bits labled MFM encoded idn
 // http://en.wikipedia.org/wiki/Modified_Frequency_Modulation
 // The emulator does not know the meaning of those bits, it just generates
@@ -40,21 +40,21 @@
 // so we can tell when they change without polling slow read of the GPIO0 pin
 // register
 //
-// This PRU handles the Pulse Width Modulation (PWM) generation of 
+// This PRU handles the Pulse Width Modulation (PWM) generation of
 // read data to the disk controller using PWM data words from PRU 1. It also
 // handles capturing the controller write data as delta time between pulses and
-// sends as delta transition time words to PRU 1. 
-// This PRU also handles the head and drive select lines. Head select is 
-// handled by stopping the MFM output data, and telling PRU 1 to start 
-// generating data from the new head. Select is similar, when we are 
-// selected we tell PRU 1 to start generating data and we turn off all 
+// sends as delta transition time words to PRU 1.
+// This PRU also handles the head and drive select lines. Head select is
+// handled by stopping the MFM output data, and telling PRU 1 to start
+// generating data from the new head. Select is similar, when we are
+// selected we tell PRU 1 to start generating data and we turn off all
 // control signals when select goes away.
-// 
+//
 // We also handle seeks. We count the number of step pulses and update
 // the cylinder number. After the steps are done we interrupt the ARM so
 // it can write out the current buffer if it's dirty and fetch the new
 // cylinder. It sends START command after the data is updated.
-// 
+//
 // TODO: The code has been sigificantly changed to use DMA to allow more
 // accurate timing of the data. Some of the comments are out of date.
 //
@@ -64,14 +64,14 @@
 // Synchronization between the two PRU's is via XFER bank 10.
 // r8.w0 PRU1_BUF_OFFSET
 //    Transfers from PRU 1 the offset in the shared memory of the word it
-//    has last written or read. Set to 0 at the start of a track. 
+//    has last written or read. Set to 0 at the start of a track.
 //    Entire register is PRU1_BUF_STATE
 // r8.b3 PRU1_STATE
 //    Transfers from PRU 1 the current operation state machine state. Used
 //    to synchronize operation of the two PRU's.
 // r9.w0 PRU0_BUF_OFFSET
 //    Transfers from PRU 0 the offset in the shared memory of the word it
-//    has last written or read. Set to 0 at the start of a track. 
+//    has last written or read. Set to 0 at the start of a track.
 //    Entire register is PRU0_BUF_STATE
 // r9.b3 PRU0_STATE
 //    Transfers from PRU 0 the current operation state machine state. Used
@@ -152,7 +152,7 @@
 // 09/08/21 DJG Changed to using command status to indicate track write done
 //     instead of interrupt. Error was ignored.
 // 03/20/21 DJG Fix race condition on sampling index.
-// 03/07/21 DJG Continue writing to end of track if end of data seen before 
+// 03/07/21 DJG Continue writing to end of track if end of data seen before
 //     index. Stop write data when turning off write.
 // 02/22/21 DJG Stop write when index seen to prevent overwriting beginning of
 //     track on drives with > 3600 RPM
@@ -176,7 +176,7 @@
 // 05/20/15 DJG Significant change to switch to DMA (on PRU1) for reading
 //    from DRAM and how data is syncronized to simulated rotation time.
 //    also some fixes for head select and MFM 422 chip control.
-//    The code as a number of internal consistency checks where it will halt 
+//    The code as a number of internal consistency checks where it will halt
 //    if it detects problems. Added igoring upper head selelect lines if
 //    they aren't needed to address heads (Fixed Northstar). Assert seek
 //    complete if step is held active too long (Fixed Northstar). Allow
@@ -186,7 +186,7 @@
 //   shift compensates for the start_time_ns delay in starting read in mfm_read.
 //   Fixed not turning track0 off when not selected. Cleared wrap flag in ECLFG
 //   so transition loss will be deteced.
-//   
+//
 // 09/06/14 DJG Fixed deadlock between shutting down and seeking to
 //   next cylinder.
 //
@@ -219,12 +219,12 @@
 #include "inc/cmd.h"
 #include "inc/cmd_write.h"
 
-// These are registers that are used globally. Check registers defined in 
+// These are registers that are used globally. Check registers defined in
 // cmd.h if looking for free registers.
 
    // PWM word from PRU 1 in various forms
 #define PWM_WORD     r5
-  
+
    // Cycle counter time to delay after index before starting write
 #define START_TIME_CLOCKS r11
 
@@ -238,12 +238,12 @@
 
    // r20 hold for last r31 value
 
-   // Minimum space left in queue from/to PRU 1. Only set if 
+   // Minimum space left in queue from/to PRU 1. Only set if
    // MEASURE_QUEUE_FULL read/write defined
 #define MIN_QUEUE_LEFT r21
 
    // Address and size of DDR memory region. Both not currently used
-#define DDR_SIZE     r22 
+#define DDR_SIZE     r22
 #define DDR_ADDR     r23
 // r24 and r25 used by subroutines and not restored
 
@@ -255,17 +255,17 @@ START:
       // Enable OCP master port
    LBCO     r0, CONST_PRUCFG, 4, 4
       // Clear SYSCFG[STANDBY_INIT] to enable OCP master port
-   CLR      r0, r0, 4         
+   CLR      r0, r0, 4
    SBCO     r0, CONST_PRUCFG, 4, 4
 
-      // Configure the programmable pointer register for PRU0 by setting 
-      // c28_pointer[15:0]field to 0x0100.  This will make C28 point 
+      // Configure the programmable pointer register for PRU0 by setting
+      // c28_pointer[15:0]field to 0x0100.  This will make C28 point
       // to 0x00010000 (PRU shared RAM).
    MOV      r0, 0x00000100
    MOV      r1, PRU0_CONTROL | CTPPR_0
    SBBO     r0, r1, 0, 4
 
-      // Configure the programmable pointer register for PRU0 by 
+      // Configure the programmable pointer register for PRU0 by
       // setting c31_pointer[15:0] field to 0x0010.  This will make C31 point
       // to 0x80001000 (DDR memory).
    MOV      r0, 0x00100000
@@ -275,7 +275,7 @@ START:
       // Enable cycle counter. We use this for timing the track/index
       // 4 cycles to read
    MOV      CYCLE_CNTR, PRU0_CONTROL | CYCLE
-   MOV      r3, PRU0_CONTROL | CONTROL    
+   MOV      r3, PRU0_CONTROL | CONTROL
    LBBO     r2, r3, 0, 4            // Read reg
    SET      r2, r2, 3
    SBBO     r2, r3, 0, 4            // Write reg
@@ -318,7 +318,7 @@ START:
    SBCO     RZERO, CONST_PRURAM, PRU_TEST4, 4
 
       // Set multiply only mode. Only needs to be done once
-   MOV      r25, 0                 
+   MOV      r25, 0
    XOUT     0, r25, 1
 
 
@@ -349,7 +349,7 @@ wait_cmd:
       // Keep our time cleared. Cycle counter stops if it overflows
    SBBO     RZERO, CYCLE_CNTR, 0, 4
    SBCO     RZERO, CONST_IEP, IEP_COUNT, 4
-   LBCO     r1, CONST_PRURAM, PRU0_CMD, 4 
+   LBCO     r1, CONST_PRURAM, PRU0_CMD, 4
    QBEQ     EXIT, r1, CMD_EXIT
    QBEQ     mfm_setup, r1, CMD_WRITE_TRACK
    QBEQ     seek, r1, CMD_SEEK_FAST
@@ -378,7 +378,7 @@ next_mfm:
    MOV      r0, 0x02100000          // low 16 is ECCTL1, upper ECCTL2
    SBCO     r0, CONST_ECAP, ECCTL1, 4
 
-sendtrack:   
+sendtrack:
    SBCO     RZERO, CONST_IEP, IEP_COUNT, 4 // Prevent timer overflow
 LBBO     r0, CYCLE_CNTR, 0, 4   // get time
 SBCO r0, CONST_PRURAM, 0xf4, 4
@@ -390,7 +390,7 @@ SBCO r0, CONST_PRURAM, 0xf4, 4
 
       // Verify queue filled
 wait_fill:
-   XIN      10, PRU1_BUF_STATE, 4              
+   XIN      10, PRU1_BUF_STATE, 4
    QBNE     wait_fill, PRU1_STATE, STATE_READ_FILLED
 
    // Now find start of track. Start is falling edge of index signal
@@ -420,21 +420,21 @@ wait_start_time:
 wait_start_loop:
    LBBO     r0, CYCLE_CNTR, 0, 4
       // Try again if we haven't timed out
-   QBLT     wait_start_loop, START_TIME_CLOCKS, r0 
+   QBLT     wait_start_loop, START_TIME_CLOCKS, r0
    MOV      r20, r31                // Initialize last index state
       // Turn on write
    SET      r30, R30_WRITE_GATE
 
       // Send read MFM data to the controller.
-      // This reads the PWM words representing the bits from PRU 1 and 
+      // This reads the PWM words representing the bits from PRU 1 and
       // writes them to the PWM controller. Bits 31-28 are the number
       // of MFM bit times the word generates. Bits 27-24 should be ignored.
       // Needs to be less than 40. currently around 27 cycles
 read:
    LBCO     PWM_WORD, CONST_PRUSHAREDRAM, PRU0_BUF_OFFSET, 4 // 3 cycles
-      // Increment and wrap if needed 
-   ADD      PRU0_BUF_OFFSET, PRU0_BUF_OFFSET, 4 
-   AND      PRU0_BUF_OFFSET, PRU0_BUF_OFFSET, SHARED_PWM_READ_MASK   
+      // Increment and wrap if needed
+   ADD      PRU0_BUF_OFFSET, PRU0_BUF_OFFSET, 4
+   AND      PRU0_BUF_OFFSET, PRU0_BUF_OFFSET, SHARED_PWM_READ_MASK
    QBEQ     end_data, PWM_WORD, 0         // Time 0 marks end of data
 
    MOV      r0, r31     // sample R31 to get consistent data for checks
@@ -454,7 +454,7 @@ indexhigh:
       // Either calculate how much space is in queue or simple did it wrap check
 #ifdef MEASURE_QUEUE_FULL_READ
       // MSB set indicates writer done so don't check
-   QBBS     chke, PRU1_BUF_STATE, 16                  
+   QBBS     chke, PRU1_BUF_STATE, 16
       // Calculate words in queue handling queue wrap
    SUB      r0, PRU1_BUF_OFFSET, PRU0_BUF_OFFSET
    QBBC     notneg, r0, 31
@@ -493,32 +493,32 @@ loadit:
 end_data:
       // If start time non zero don't fill till end of track since end not
       // at index
-   QBNE     end_track, START_TIME_CLOCKS, 0   
+   QBNE     end_track, START_TIME_CLOCKS, 0
    QBBC     end_track, r31, R31_INDEX_BIT     // Low, stop
    JMP      end_data
 end_track:
       // Stop write
    SBCO     RZERO, CONST_ECAP, CAP2, 4  // Turn off data
-   CLR      r30, R30_WRITE_GATE  
+   CLR      r30, R30_WRITE_GATE
    MOV      PRU0_STATE, STATE_READ_DONE
    XOUT     10, PRU0_BUF_STATE, 4
    MOV      r0, CMD_STATUS_OK
    SBCO     r0, CONST_PRURAM, PRU0_CMD, 4
 wait_done:
-   XIN      10, PRU1_BUF_STATE, 4              
+   XIN      10, PRU1_BUF_STATE, 4
    QBNE     wait_done, PRU1_STATE, STATE_READ_DONE
       // Starting a new track at the beginning. Reset time and counters to
       // beginning.
    MOV      TRACK_BIT, 0
    SBBO     RZERO, CYCLE_CNTR, 0, 4     // Set time to beginning of track
    SBCO     RZERO, CONST_IEP, IEP_COUNT, 4  // Prevent overflow and halt
-   LBCO     r1, CONST_PRURAM, PRU0_CMD, 4 
+   LBCO     r1, CONST_PRURAM, PRU0_CMD, 4
    QBEQ     EXIT, r1, CMD_EXIT
    JMP      wait_cmd
-   
+
       // ARM has requested us to exit
 EXIT:
-   CLR      r30, R30_WRITE_GATE  
+   CLR      r30, R30_WRITE_GATE
    SBCO     RZERO, CONST_ECAP, CAP2, 4  // Turn off data
       // Change write gate signal to GPIO control
    MOV      r1, AM335X_CTRL_BASE | CONF_MCASP0_ACLKX
@@ -527,7 +527,7 @@ EXIT:
 
    MOV      r1, CMD_STATUS_OK
    SBCO     r1, CONST_PRURAM, PRU0_CMD, 4 // Indicate command completed ok
-   // Tell PRU 1 to exit. 
+   // Tell PRU 1 to exit.
    MOV      PRU0_STATE, STATE_EXIT
    XOUT     10, PRU0_BUF_STATE, 4
       // Tell ARM to read CYL

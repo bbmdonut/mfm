@@ -1,8 +1,9 @@
 // This is a utility program to process existing MFM delta transition data.
 // Used to extract the sector contents to a file
 //
+// 03/31/25 BBMD Added support for RLL handling
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.
-// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from 
+// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from
 //    header
 // 07/03/24 DJG Allow --begin_time to override controller default for ext2emu
 // 10/09/23 DJG Remove interleave option except from ext2emu so ext2emu
@@ -68,11 +69,14 @@
 #include <errno.h>
 #include <libiberty.h>
 
+#define DEF_DATA
+
 #include "msg.h"
 #include "crc_ecc.h"
 #include "emu_tran_file.h"
-#define DEF_DATA
+#include "decoder_common.h"
 #include "mfm_decoder.h"
+#include "rll_decoder.h"
 #include "parse_cmdline.h"
 #include "analyze.h"
 #include "deltas_read.h"  // Code is from deltas_read_file.c
@@ -111,7 +115,7 @@ int main (int argc, char *argv[])
       return 0;
    }
 
-   // If they specified a transitions or emulation file get options that 
+   // If they specified a transitions or emulation file get options that
    // were stored in it.
    parse_cmdline(argc, argv, &drive_params, "tm", 1, 1, 1, 0);
    if (drive_params.transitions_filename != NULL ||
@@ -147,7 +151,7 @@ int main (int argc, char *argv[])
             msg(MSG_INFO, "Note: %s\n", orig_note);
          }
          // We need first argument of new argv to be program name argv[0]
-         cmdline = msg_malloc(strlen(orig_cmdline) + strlen(argv[0]) + 1, 
+         cmdline = msg_malloc(strlen(orig_cmdline) + strlen(argv[0]) + 1,
             "main cmdline");
          strcpy(cmdline, argv[0]);
          strcat(cmdline, " ");
@@ -161,7 +165,7 @@ int main (int argc, char *argv[])
          // them in drive_params. Don't make errors fatal in case bad
          // option gets in header
          parse_cmdline(tran_argc, tran_argv, &drive_params, "", 0, 0, 1, 0);
-       
+
          free(cmdline);
       }
    }
@@ -193,15 +197,15 @@ int main (int argc, char *argv[])
       }
    }
    // If analyze requested get drive parameters.
-   if (drive_params.analyze && 
-         (drive_params.transitions_filename != NULL || 
+   if (drive_params.analyze &&
+         (drive_params.transitions_filename != NULL ||
                drive_params.emulation_filename != NULL)) {
       analyze_disk(&drive_params, deltas, MAX_DELTAS, 1);
       msg(MSG_INFO,"\n");
       // Print analysis results
       parse_print_cmdline(&drive_params, 1, 0);
       // If we are also converting data set up for it. Otherwise exit
-      if ((drive_params.transitions_filename != NULL && 
+      if ((drive_params.transitions_filename != NULL &&
             drive_params.emulation_filename != NULL) ||
             drive_params.extract_filename != NULL) {
          // Go back to beginning of file
@@ -217,21 +221,21 @@ int main (int argc, char *argv[])
       }
    }
 
-   if (drive_params.transitions_filename != NULL && 
-       drive_params.emulation_filename == NULL && 
+   if (drive_params.transitions_filename != NULL &&
+       drive_params.emulation_filename == NULL &&
        drive_params.extract_filename == NULL) {
       msg(MSG_FATAL, "Must specify emulation and or extract file to be generated\n");
       exit(1);
    }
-   if (drive_params.transitions_filename == NULL && 
-       drive_params.emulation_filename != NULL && 
+   if (drive_params.transitions_filename == NULL &&
+       drive_params.emulation_filename != NULL &&
        drive_params.extract_filename == NULL) {
       msg(MSG_FATAL, "Must specify extract file to be generated\n");
       exit(1);
    }
 
    if (drive_params.extract_filename != NULL && !drive_params.xebec_skew &&
-     (mfm_controller_info[drive_params.controller].flag & FLAG_XEBEC)) {
+     (controller_info[drive_params.controller].flag & FLAG_XEBEC)) {
       printf("Check extracted data file. Some Xebec controllers need --xebec_skew option\n  to generate valid extracted data file\n");
    }
 
@@ -252,7 +256,7 @@ int main (int argc, char *argv[])
       // Only clear status if we are moving to the next track. If retries
       // were done we may have multiple reads of the same track.
       if (last_cyl != cyl || last_head != head) {
-         mfm_init_sector_status_list(sector_status_list,
+         init_sector_status_list(sector_status_list,
                drive_params.num_sectors);
          if (last_cyl != -1) {
             mfm_end_track(&drive_params, last_cyl, last_head);
@@ -261,8 +265,15 @@ int main (int argc, char *argv[])
       //printf("Decoding new track %d %d\n",cyl, head);
       deltas_update_count(num_deltas, 0);
       // If head & cylinder haven't changed assume it's a retry.
-      mfm_decode_track(&drive_params, cyl, head, deltas,
-            &seek_difference, sector_status_list);
+      // If we're working with RLL data, it's a much different decoding
+      // process...
+      if (drive_params.is_rll) {
+         rll_decode_track(&drive_params, cyl, head, deltas,
+               &seek_difference, sector_status_list);
+      } else {
+         mfm_decode_track(&drive_params, cyl, head, deltas,
+               &seek_difference, sector_status_list);
+      }
 #if 0
       if (1 || status != SECT_HEADER_FOUND) {
          if (cyl == 0 && head == 0) {
@@ -316,7 +327,7 @@ uint64_t reverse_bits(uint64_t value, int len_bits) {
    for (i = 0; i < len_bits; i++) {
       new_value = (new_value << 1) | (value & 1);
       value >>= 1;
-   } 
+   }
    return new_value;
 }
 
@@ -374,7 +385,7 @@ static int get_cyl() {
 static void set_sector_interleave(DRIVE_PARAMS *drive_params,
      int sector_interleave_i, int track_interleave_i) {
 
-   list_size_bytes = sizeof(*sector_used_list) * drive_params->num_sectors; 
+   list_size_bytes = sizeof(*sector_used_list) * drive_params->num_sectors;
    sector_interleave = sector_interleave_i;
    sector_used_list = msg_malloc(list_size_bytes,"sector_used_list");
    track_interleave = track_interleave_i;
@@ -410,13 +421,13 @@ static void start_new_cyl(DRIVE_PARAMS *drive_params) {
 
 // Get current sector
 static int get_sector(DRIVE_PARAMS *drive_params) {
-  return sector + drive_params->first_sector_number; 
+  return sector + drive_params->first_sector_number;
 }
 
 // Increment sector variable
 //
 // drive_params: Drive parameters
-static void inc_sector(DRIVE_PARAMS *drive_params) 
+static void inc_sector(DRIVE_PARAMS *drive_params)
 {
       // Mark current sector used and increment by interleave if we
       // haven't generated all sectors.
@@ -511,13 +522,13 @@ static void get_data(DRIVE_PARAMS *drive_params, uint8_t track[], int length) {
        drive_params->num_sectors + sector -
        drive_params->first_sector_number;
 
-   if (lseek(drive_params->ext_fd, 
+   if (lseek(drive_params->ext_fd,
           block * drive_params->sector_size, SEEK_SET) == -1) {
-      msg(MSG_FATAL, "Failed to seek to sector in extracted data file %s\n", 
+      msg(MSG_FATAL, "Failed to seek to sector in extracted data file %s\n",
            strerror(errno));
       exit(1);
    }
-   if ((rc = read(drive_params->ext_fd, track, 
+   if ((rc = read(drive_params->ext_fd, track,
          drive_params->sector_size)) != drive_params->sector_size) {
       msg(MSG_FATAL, "Failed to read extracted data file rc %d %s\n", rc,
             rc == -1 ? strerror(errno): "");
@@ -543,13 +554,13 @@ static void get_metadata(DRIVE_PARAMS *drive_params, uint8_t track[], int length
        drive_params->num_sectors + get_sector(drive_params) -
        drive_params->first_sector_number;
 
-   if (lseek(drive_params->ext_metadata_fd, 
+   if (lseek(drive_params->ext_metadata_fd,
           block * drive_params->metadata_bytes, SEEK_SET) == -1) {
-      msg(MSG_FATAL, "Failed to seek to sector in extracted metadata file %s\n", 
+      msg(MSG_FATAL, "Failed to seek to sector in extracted metadata file %s\n",
            strerror(errno));
       exit(1);
    }
-   if ((rc = read(drive_params->ext_metadata_fd, track, 
+   if ((rc = read(drive_params->ext_metadata_fd, track,
          drive_params->metadata_bytes)) != drive_params->metadata_bytes) {
       msg(MSG_FATAL, "Failed to read extracted metadata file rc %d %s\n", rc,
             rc == -1 ? strerror(errno): "");
@@ -568,8 +579,8 @@ static void get_metadata(DRIVE_PARAMS *drive_params, uint8_t track[], int length
 // special_list_ndx: Next free index in list
 // special_list_len: Maximum number of entries in list
 //
-static void process_field(DRIVE_PARAMS *drive_params, 
-   uint8_t full_track[], int start, int length, 
+static void process_field(DRIVE_PARAMS *drive_params,
+   uint8_t full_track[], int start, int length,
    FIELD_L field_def[], SPECIAL_LIST special_list[], int *special_list_ndx,
    int special_list_len)
 {
@@ -591,11 +602,11 @@ static void process_field(DRIVE_PARAMS *drive_params,
    while (field_def[ndx].len_bytes != -1) {
       data_set = 0;
       switch (field_def[ndx].type) {
-            // Fill the specified range with the specified value only if last 
+            // Fill the specified range with the specified value only if last
             // sector of track
          case FIELD_FILL_LAST_SECTOR:
             // Only take action on last sector
-            
+
             // This used to be based on logical sector. For other example
             // I had logical and physical were both the last sector. New
             // sample they are different and physical last sector got the
@@ -623,16 +634,16 @@ static void process_field(DRIVE_PARAMS *drive_params,
                exit(1);
             }
             if (field_def[ndx].op == OP_SET) {
-               memset(&track[field_def[ndx].byte_offset_bit_len], 
+               memset(&track[field_def[ndx].byte_offset_bit_len],
                   field_def[ndx].value, field_def[ndx].len_bytes);
-            } else if (field_def[ndx].op == OP_XOR || 
+            } else if (field_def[ndx].op == OP_XOR ||
                   field_def[ndx].op == OP_REVERSE_XOR) {
                for (i = 0; i < field_def[ndx].len_bytes; i++) {
-                  track[field_def[ndx].byte_offset_bit_len + i] ^= 
+                  track[field_def[ndx].byte_offset_bit_len + i] ^=
                      field_def[ndx].value;
                 }
             } else {
-               msg(MSG_FATAL, "op %d not supported for FIELD_FILL\n", 
+               msg(MSG_FATAL, "op %d not supported for FIELD_FILL\n",
                   field_def[ndx].op);
                exit(1);
             }
@@ -671,7 +682,7 @@ static void process_field(DRIVE_PARAMS *drive_params,
             }
             value = get_check_value(&track[crc_start], crc_end - crc_start + 1,
                &drive_params->header_crc,
-               mfm_controller_info[drive_params->controller].header_check);
+               controller_info[drive_params->controller].header_check);
          break;
          case FIELD_DATA_CRC:
             if (crc_end == -1) {
@@ -679,12 +690,12 @@ static void process_field(DRIVE_PARAMS *drive_params,
             }
             value = get_check_value(&track[crc_start], crc_end - crc_start + 1,
                &drive_params->data_crc,
-               mfm_controller_info[drive_params->controller].data_check);
+               controller_info[drive_params->controller].data_check);
             if (drive_params->mark_bad_list != NULL) {
-               MARK_BAD_INFO *mark_bad_list = 
+               MARK_BAD_INFO *mark_bad_list =
                     &drive_params->mark_bad_list[drive_params->next_mark_bad];
                if (get_cyl() == mark_bad_list->cyl &&
-                    get_head() == mark_bad_list->head &&  
+                    get_head() == mark_bad_list->head &&
                     get_sector(drive_params) == mark_bad_list->sector) {
                   // Invert the check value to invalidiate
                   value = ~value;
@@ -753,8 +764,8 @@ static void process_field(DRIVE_PARAMS *drive_params,
             if (*special_list_ndx >= special_list_len) {
                msg(MSG_FATAL, "Special list overflow\n");
                exit(1);
-            }      
-            special_list[*special_list_ndx].index = start + 
+            }
+            special_list[*special_list_ndx].index = start +
                 field_def[ndx].byte_offset_bit_len;
             special_list[(*special_list_ndx)++].pattern = 0x4489;
             value = 0xa1;
@@ -765,8 +776,8 @@ static void process_field(DRIVE_PARAMS *drive_params,
             if (*special_list_ndx >= special_list_len) {
                msg(MSG_FATAL, "Special list overflow\n");
                exit(1);
-            }      
-            special_list[*special_list_ndx].index = start + 
+            }
+            special_list[*special_list_ndx].index = start +
                 field_def[ndx].byte_offset_bit_len;
             special_list[(*special_list_ndx)++].pattern = 0x1224;
             value = 0x42;
@@ -777,8 +788,8 @@ static void process_field(DRIVE_PARAMS *drive_params,
             if (*special_list_ndx >= special_list_len) {
                msg(MSG_FATAL, "Special list overflow\n");
                exit(1);
-            }      
-            special_list[*special_list_ndx].index = start + 
+            }
+            special_list[*special_list_ndx].index = start +
                 field_def[ndx].byte_offset_bit_len;
             special_list[(*special_list_ndx)++].pattern = 0x4891;
             value = 0x85;
@@ -789,8 +800,8 @@ static void process_field(DRIVE_PARAMS *drive_params,
             if (*special_list_ndx >= special_list_len) {
                msg(MSG_FATAL, "Special list overflow\n");
                exit(1);
-            }      
-            special_list[*special_list_ndx].index = start + 
+            }
+            special_list[*special_list_ndx].index = start +
                 field_def[ndx].byte_offset_bit_len;
             special_list[(*special_list_ndx)++].pattern = 0x2244;
             value = 0x0a;
@@ -801,8 +812,8 @@ static void process_field(DRIVE_PARAMS *drive_params,
             if (*special_list_ndx >= special_list_len) {
                msg(MSG_FATAL, "Special list overflow\n");
                exit(1);
-            }      
-            special_list[*special_list_ndx].index = start + 
+            }
+            special_list[*special_list_ndx].index = start +
                 field_def[ndx].byte_offset_bit_len;
             special_list[(*special_list_ndx)++].pattern = 0x89aa;
             value = 0x10;
@@ -813,8 +824,8 @@ static void process_field(DRIVE_PARAMS *drive_params,
             if (*special_list_ndx >= special_list_len) {
                msg(MSG_FATAL, "Special list overflow\n");
                exit(1);
-            }      
-            special_list[*special_list_ndx].index = start + 
+            }
+            special_list[*special_list_ndx].index = start +
                 field_def[ndx].byte_offset_bit_len;
             special_list[(*special_list_ndx)++].pattern = 0x12aa;
             value = 0xC0;
@@ -829,7 +840,7 @@ static void process_field(DRIVE_PARAMS *drive_params,
       }
       if (data_set) {
             // Just mark last byte written, track already updated
-         field_filled = MAX(field_filled, field_def[ndx].byte_offset_bit_len + 
+         field_filled = MAX(field_filled, field_def[ndx].byte_offset_bit_len +
             field_def[ndx].len_bytes - 1);
          // If no bit list update the specified bytes
       } else if (field_def[ndx].bit_list == NULL) {
@@ -838,11 +849,11 @@ static void process_field(DRIVE_PARAMS *drive_params,
             value = reverse_bits(value, field_def[ndx].len_bytes * 8);
          }
 
-         field_filled = MAX(field_filled, field_def[ndx].byte_offset_bit_len + 
+         field_filled = MAX(field_filled, field_def[ndx].byte_offset_bit_len +
             field_def[ndx].len_bytes - 1);
-         if (field_def[ndx].byte_offset_bit_len + field_def[ndx].len_bytes 
+         if (field_def[ndx].byte_offset_bit_len + field_def[ndx].len_bytes
               > length) {
-            msg(MSG_FATAL, "Track overflow field update %d %d %d\n", 
+            msg(MSG_FATAL, "Track overflow field update %d %d %d\n",
                field_def[ndx].byte_offset_bit_len, field_def[ndx].len_bytes, length);
             exit(1);
          }
@@ -873,36 +884,36 @@ static void process_field(DRIVE_PARAMS *drive_params,
             // the bits specified. In this encoding the bits are numbered with
             // the most significant bit of the first byte 0 counting up.
             // Multiple disjoint bit fields can be specified.
-            // bitl_start -1 is end of list, -2 is discard the bits 
+            // bitl_start -1 is end of list, -2 is discard the bits
          while (bit_list[ndx2].bitl_start != -1) {
             for (i = 0; i < bit_list[ndx2].bitl_length; i++) {
                if (bit_list[ndx2].bitl_start == -2) {
                   bit_count++; // Discard these bits
                } else {
                      // Find byte and bit to update
-                  byte_offset = (bit_list[ndx2].bitl_start + i) / 8; 
+                  byte_offset = (bit_list[ndx2].bitl_start + i) / 8;
                   field_filled = MAX(field_filled, byte_offset);
-                  bit_offset = (bit_list[ndx2].bitl_start + i) % 8; 
+                  bit_offset = (bit_list[ndx2].bitl_start + i) % 8;
                   if (byte_offset >= length) {
                      msg(MSG_FATAL, "Track overflow bit field\n");
                      exit(1);
                   }
                   // Extract bit and update in track
-                  temp = ( (value >> (field_def[ndx].byte_offset_bit_len - 
+                  temp = ( (value >> (field_def[ndx].byte_offset_bit_len -
                      bit_count++ - 1)) & 1) << (7 - bit_offset);
                   if (field_def[ndx].op == OP_XOR || field_def[ndx].op == OP_REVERSE_XOR) {
                      track[byte_offset] ^= temp;
                   } else {
                      track[byte_offset] &= ~(1 << (7 - bit_offset));
                      track[byte_offset] |= temp;
-                  } 
+                  }
                }
             }
             ndx2++;
          }
             // Verify field size agrees with sum of bit field lengths
          if (bit_count != field_def[ndx].byte_offset_bit_len) {
-            msg(MSG_FATAL, "Bit field length mismatch %d %d\n", 
+            msg(MSG_FATAL, "Bit field length mismatch %d %d\n",
                bit_count, field_def[ndx].byte_offset_bit_len);
             exit(1);
          }
@@ -941,7 +952,7 @@ static int process_track(DRIVE_PARAMS *drive_params,
       switch (track_def[ndx].type) {
          case TRK_FILL:
             if (start + track_def[ndx].count > length) {
-               msg(MSG_FATAL, "Track overflow by %d fill, %d %d %d\n", 
+               msg(MSG_FATAL, "Track overflow by %d fill, %d %d %d\n",
                    start + track_def[ndx].count - length,
                    start, track_def[ndx].count, length);
                exit(1);
@@ -953,8 +964,8 @@ static int process_track(DRIVE_PARAMS *drive_params,
                // Process a sub list of track definitions the specified number
                // of times
             for (i = 0; i < track_def[ndx].count; i++) {
-               start = process_track(drive_params, track, start, length, 
-                  (TRK_L *) track_def[ndx].list, 
+               start = process_track(drive_params, track, start, length,
+                  (TRK_L *) track_def[ndx].list,
                   special_list, special_list_ndx, special_list_len);
             }
          break;
@@ -967,7 +978,7 @@ static int process_track(DRIVE_PARAMS *drive_params,
                // Fill the field with the specified value then
                // process the field definitions
             memset(&track[start], track_def[ndx].value, track_def[ndx].count);
-            process_field(drive_params, track, start, track_def[ndx].count, 
+            process_field(drive_params, track, start, track_def[ndx].count,
                (FIELD_L *) track_def[ndx].list, special_list, special_list_ndx,
                special_list_len);
             start = new_start;
@@ -990,11 +1001,11 @@ static int process_track(DRIVE_PARAMS *drive_params,
 // special_list: List of locations special a1 mark pattern should be written
 // special_list_length; Length of list
 void mfm_encode(uint8_t data[], int length, uint32_t mfm_data[], int mfm_length,
-   SPECIAL_LIST special_list[], int special_list_length) 
+   SPECIAL_LIST special_list[], int special_list_length)
 {
       // Convert a byte to 16 MFM encoded bits. First index is the MFM
       // bit immediately preceding.
-   static uint16_t mfm_encode[2][256]; 
+   static uint16_t mfm_encode[2][256];
       // One on first call
    static int first_time = 1;
       // Used to index first subscript in mfm_encode
@@ -1039,7 +1050,7 @@ void mfm_encode(uint8_t data[], int length, uint32_t mfm_data[], int mfm_length,
       } else {
          value16 = mfm_encode[last_bit][data[i]];
       }
-         // Put in correct half of 32 bit word. 
+         // Put in correct half of 32 bit word.
       if (i & 1) {
          value32 = value32 << 16 | value16;
          mfm_data[i/2] = value32;
@@ -1051,7 +1062,7 @@ void mfm_encode(uint8_t data[], int length, uint32_t mfm_data[], int mfm_length,
 }
 
 // Convert an extracted data file to an emulator file
-// 
+//
 //TODO: Is interleave handling sufficient?
 //   Think about handle DEC_RQDX3 format where tracks vary. Having format
 //   vary between sectors on same track is really annoying.
@@ -1076,14 +1087,14 @@ void ext2emu(int argc, char *argv[])
 
    parse_validate_options_listed(&drive_params, "hcemf");
 
-   if (mfm_controller_info[drive_params.controller].track_layout == NULL) {
+   if (controller_info[drive_params.controller].track_layout == NULL) {
       msg(MSG_FATAL, "Not yet able to process format %s\n",
-         mfm_controller_info[drive_params.controller].name);
+         controller_info[drive_params.controller].name);
       exit(1);
    }
 
       // Pull various parameters we need for this controller
-   controller = &mfm_controller_info[drive_params.controller];
+   controller = &controller_info[drive_params.controller];
    drive_params.num_sectors = controller->write_num_sectors;
    drive_params.first_sector_number = controller->write_first_sector_number;
    drive_params.sector_size = controller->write_sector_size;
@@ -1123,7 +1134,7 @@ void ext2emu(int argc, char *argv[])
         drive_params.start_time_ns, drive_params.emu_track_data_bytes);
 
    fstat(drive_params.ext_fd, &finfo);
-   calc_size = drive_params.sector_size * drive_params.num_sectors * 
+   calc_size = drive_params.sector_size * drive_params.num_sectors *
         drive_params.num_head * drive_params.num_cyl;
       // Warn if the extracted data file doesn't match the expected size for
       // the parameters specified
@@ -1133,7 +1144,7 @@ void ext2emu(int argc, char *argv[])
 
       // If interleave values specified set them
    if (drive_params.sector_numbers != NULL) {
-      set_sector_interleave(&drive_params, drive_params.sector_numbers[0], 
+      set_sector_interleave(&drive_params, drive_params.sector_numbers[0],
          drive_params.sector_numbers[1]);
    } else {
       set_sector_interleave(&drive_params, 1, 0);
@@ -1158,10 +1169,10 @@ void ext2emu(int argc, char *argv[])
             // Generate the byte data in track, convert to MFM and write
             // to emulator file
          track_filled = process_track(&drive_params, track, 0, track_length,
-            controller->track_layout, 
+            controller->track_layout,
             special_list, &special_list_ndx, ARRAYSIZE(special_list));
-         mfm_encode(track, track_length, track_mfm, 
-            drive_params.emu_track_data_bytes / sizeof(track_mfm[0]), 
+         mfm_encode(track, track_length, track_mfm,
+            drive_params.emu_track_data_bytes / sizeof(track_mfm[0]),
             special_list, special_list_ndx);
          emu_file_write_track_bits(drive_params.emu_fd, (uint32_t *)track_mfm,
              drive_params.emu_track_data_bytes/4, cyl, head,
@@ -1177,5 +1188,3 @@ void ext2emu(int argc, char *argv[])
    }
    emu_file_close(drive_params.emu_fd, 1);
 }
-
-

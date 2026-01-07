@@ -1,6 +1,6 @@
 // This module is routines for writing a disk drive.
 // drive_write_disk writes the disk
-// 
+//
 // The drive must be at track 0 on startup or drive_seek_track0 called.
 //
 // Copyright 2021 David Gesswein.
@@ -73,10 +73,10 @@ void drive_write_disk(DRIVE_PARAMS *drive_params)
       if (cyl >= drive_params->write_precomp_cyl) {
          generate_pwm_table(drive_params, 1);
       }
- 
+
       if (cyl != 0) {
             // Slow seek doesn't slow down writing so always use it.
-         drive_step(DRIVE_STEP_SLOW, 1, DRIVE_STEP_UPDATE_CYL, 
+         drive_step(DRIVE_STEP_SLOW, 1, DRIVE_STEP_UPDATE_CYL,
             DRIVE_STEP_FATAL_ERR);
       }
       if (cyl % 5 == 0)
@@ -97,7 +97,7 @@ for (n = 0; n < drive_params->emu_file_info->num_head; n++) {
 }
       pru_write_mem(MEM_DDR, data, cyl_size, 0);
       for (head = 0; head < drive_params->num_head; head++) {
-         drive_set_head(head); 
+         drive_set_head(head);
          pru_write_word(MEM_PRU1_DATA, PRU1_CUR_HEAD, head);
          if (pru_exec_cmd(CMD_WRITE_TRACK, 0)) {
             drive_print_drive_status(MSG_FATAL, drive_get_drive_status());
@@ -109,11 +109,11 @@ for (n = 0; n < drive_params->emu_file_info->num_head; n++) {
 
 
 // Make a table which we index with the six MSB of the MFM bitstream
-// to determine the next PWM word. 
+// to determine the next PWM word.
 
 // The MFM bitstream is the MFM data and clock bits referred to as
 // mfm encoded here:
-// http://en.wikipedia.org/wiki/Modified_Frequency_Modulation 
+// http://en.wikipedia.org/wiki/Modified_Frequency_Modulation
 
 // All the words generated must have a minimum duration of 2 bit cells,
 // nominally 40 clocks, 200 ns.
@@ -130,7 +130,7 @@ for (n = 0; n < drive_params->emu_file_info->num_head; n++) {
 // last two bits (00) for the next lookup.  For valid MFM code we
 // could generate the waveform for all four bits instead since the
 // next bit should be a 1. I don't in case it is a zero.
-// 
+//
 // Bits 31-28 are how many bits to remove from data. This is the MFM
 //   clock and data bits we will shift off, not anything to do with the
 //   data bits encoded by the MFM encoding.
@@ -204,7 +204,7 @@ static void generate_pwm_table(DRIVE_PARAMS *drive_params, int do_precomp) {
          if (do_precomp && (idx >> 1) == 0x14) {
             bits -= early_precomp_clk;
             bits |= (early_precomp_clk & 0xff) << 8;
-         } 
+         }
       } else {
          pat = (idx << rec.bitcount) >> 3;
          // If two more zeros followed by 101 then we delay the first one

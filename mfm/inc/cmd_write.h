@@ -27,7 +27,7 @@
 
    // Save pin setting to restore on exit
 #define PRU0_MCASP0_ACLKX            0x50
-   // Number of bytes in each drive# value. 
+   // Number of bytes in each drive# value.
 #define DRIVE_DATA_BYTES                4
    // PRU 0-1 queue underrun count
 #define PRU0_RQUEUE_UNDERRUN         0x6c
@@ -39,7 +39,7 @@
 // Cycle count for PWM logic 1 at current data rate (4 bytes)
 #define PRU0_DEFAULT_PULSE_WIDTH     0x90
 
-// Start and end time for generating index pulse in PRU clocks 
+// Start and end time for generating index pulse in PRU clocks
 #define PRU0_START_INDEX_TIME        0x94
 #define PRU0_END_INDEX_TIME          0x98
 
@@ -52,7 +52,7 @@
 #define PRU1_DRIVE0_TRACK_HEADER_BYTES 0x50
 #define PRU1_DRIVE0_TRACK_DATA_BYTES 0x58
 
-// inverse bit period scaled 2^32, 2^32/bit_period 
+// inverse bit period scaled 2^32, 2^32/bit_period
 #define PRU1_INV_BIT_PERIOD_S32      0x60
 
 // Nominal bit cell cycles

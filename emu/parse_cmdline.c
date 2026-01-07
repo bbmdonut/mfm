@@ -393,17 +393,19 @@ static int parse_controller(char *arg) {
    int i;
    int controller = -1;
 
-   for (i = 0; mfm_controller_info[i].name != NULL; i++) {
-      if (strcasecmp(mfm_controller_info[i].name, arg) == 0) {
-         controller = mfm_controller_info[i].value;
+   for (i = 0; controller_info[i].name != NULL; i++) {
+      if (strcasecmp(controller_info[i].name, arg) == 0) {
+         controller = controller_info[i].value;
       }
    }
+
    if (controller == -1) {
       msg(MSG_FATAL, "Unknown controller for initialize %s. Choices are\n",arg);
-      for (i = 0; mfm_controller_info[i].name != NULL; i++) {
-         msg(MSG_FATAL,"%s\n",mfm_controller_info[i].name);
+      for (i = 0; controller_info[i].name != NULL; i++) {
+         msg(MSG_FATAL,"%s\n",controller_info[i].name);
       }
       exit(1);
    }
+
    return controller;
 }

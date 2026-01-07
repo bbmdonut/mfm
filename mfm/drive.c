@@ -12,9 +12,12 @@
 // drive_is_file: Indicate if real drive or reading from file
 // drive_enable_recovery: Set the recovery line active/inactive
 // drive_has_write_fault: Return true if drive has write fault
-// 
+//
 // The drive must be at track 0 on startup or drive_seek_track0 called.
 //
+// 08/06/2025 BBMD Added a check for external stepper operation to prevent
+//    calling drive_seek_track0, as track 0 detection doesn't always
+//    work correctly in these cases
 // 06/02/2023 DJG Fixed write fault error reading NEC drive
 // 07/05/2019 DJG Added support for using recovery signal
 // 03/22/2019 DJG Added REV C support
@@ -142,7 +145,7 @@ void drive_select(int drive)
       if (drive == (i + 1)) {
          write(fd[i], "high", 4); // Signal is active low with inverting driver
       } else {
-         write(fd[i], "low", 3); 
+         write(fd[i], "low", 3);
       }
    }
    usleep(10); // Allow lines to settle
@@ -190,7 +193,7 @@ void drive_set_head(int head)
       for (i = 0; i < 4; i++) {
          fd[i] = open(head_pins[board_revision][i], O_WRONLY);
          if (fd[i] < 0) {
-            msg(MSG_FATAL, "Unable to open pin %s\n", 
+            msg(MSG_FATAL, "Unable to open pin %s\n",
                head_pins[board_revision][i]);
             exit(1);
          }
@@ -315,9 +318,9 @@ void drive_setup(DRIVE_PARAMS *drive_params)
    // Turn off recovery mode
    drive_enable_recovery(0);
 
-   // Make sure head lines valid. NEC D5124 generates write fault if invalid 
-   // head selected. 
-   drive_set_head(0); 
+   // Make sure head lines valid. NEC D5124 generates write fault if invalid
+   // head selected.
+   drive_set_head(0);
 
    drive_select(drive_params->drive);
 
@@ -327,9 +330,13 @@ void drive_setup(DRIVE_PARAMS *drive_params)
       exit(1);
    }
 
-   if (!drive_at_track0()) {
-      msg(MSG_INFO, "Returning to track 0\n");
-      drive_seek_track0();
+   // Returning to track 0 can be problematic when using
+   // external stepping control. Bypass the return in this case.
+   if (!drive_params->ext_stepper) {
+	   if (!drive_at_track0()) {
+	      msg(MSG_INFO, "Returning to track 0\n");
+	      drive_seek_track0();
+	   }
    }
 }
 
@@ -380,7 +387,7 @@ double drive_rpm(void) {
       return(200e6 / pru_get_cmd_data() * 60);
    } else {
       msg(MSG_FATAL, "Drive RPM failed\n");
-      if ((pru_read_word(MEM_PRU0_DATA, PRU0_STATUS) & 
+      if ((pru_read_word(MEM_PRU0_DATA, PRU0_STATUS) &
          ((1 << R31_INDEX_BIT) | (1 << R31_WRITE_FAULT_BIT))) == 0) {
          msg(MSG_FATAL, "Is J4 cable plugged in backward?\n");
       }
@@ -409,7 +416,7 @@ void drive_enable_recovery(int enable)
    if (enable) {
       write(fd, "high", 4); // Signal is active low with inverting driver
    } else {
-      write(fd, "low", 3); 
+      write(fd, "low", 3);
    }
    usleep(100); // Allow lines to settle
 }

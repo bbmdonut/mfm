@@ -1,5 +1,5 @@
 // copy track xfer_cyl, xfer_head from good.emu to bad.emu
-// build with 
+// build with
 //   gcc -o copy_emu copy_emu.c emu_tran_file.c msg.c crc_ecc.c -Iinc -lm
 
 #include <stdint.h>
@@ -31,7 +31,7 @@ int main() {
 #if 0
    emu_file_seek_track(out_fd, xfer_cyl, xfer_head, &emu_out_file_info);
    emu_file_read_track_bits(out_fd, &emu_out_file_info, words2, ARRAYSIZE(words2),
-     &cyl, &head); 
+     &cyl, &head);
 for (i = 0; i < 4000; i++) {
    if (words[i] != words2[i]) {
       printf("Diff %d %x %x\n", i, words[i], words2[i]);

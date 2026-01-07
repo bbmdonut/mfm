@@ -62,7 +62,7 @@
 #define ECCTL2            0x2a
 #define ECFLG             0x2e
 #define ECCLR             0x30
- 
+
 // IEP
 #define IEP_COUNT         0x0c
 #define INTC_REGS_BASE                0x00004000
@@ -93,7 +93,7 @@
 
 //EDMA registers
 #define EDMA0_CC_BASE 0x49000000
-#define DMAQNUM0    0x0240 
+#define DMAQNUM0    0x0240
 #define QUEPRI      0x0284
 #define EMR         0x0300
 #define EMCR        0x0308
@@ -138,7 +138,7 @@
 #define SRC_DST_CIDX    0x18
 #define CCNT            0x1C
 #define DCHMAP_0        0x100
- 
+
 #define AM335X_CTRL_BASE    0x44e10000
 #define CONF_MCASP0_ACLKX   0x990
 

@@ -43,7 +43,7 @@
         "P8,32",
         "P8.33",
         /* Hardware IP cores in use */
-        "pruss"; 
+        "pruss";
 
     fragment@0 {
         target = <&am33xx_pinmux>;
@@ -90,7 +90,7 @@
                     0x04c 0x3f // IN   P9_16 = gpio0_05
 
                 >;
-            };        
+            };
 
         };
     };

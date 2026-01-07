@@ -11,7 +11,7 @@
 //
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.
 // 11/06/24 DJG Allow turning off xebec_skew if set in file.
-// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from 
+// 10/30/24 DJG Add new option to handle Xebec data skewed one sector from
 //    header
 // 02/20/24 DJG Set controller to CONTROLLER_NONE if not valid in file
 // 10/09/23 DJG Only support ext2emu interleave parameters. Drop old mfm_read,
@@ -49,7 +49,7 @@
 // 01/04/15 DJG Suppressed printing command line options that weren't set
 //    Added begin_time. Made failure to decode options non fatal when
 //    reading options stored in file headers.
-// 11/09/14 DJG Modified option parsing to allow mfm_util to reparse 
+// 11/09/14 DJG Modified option parsing to allow mfm_util to reparse
 //    options stored in transitions file
 // 10/01/14 DJG Incremented version number
 // 09/06/14 DJG Made new class of info errors not print by default.
@@ -116,7 +116,7 @@ char *parse_print_cmdline(DRIVE_PARAMS *drive_params, int print,
 
    if (drive_params->controller != CONTROLLER_NONE) {
       safe_print(&cmdptr, &cmdleft, "--format %s ",
-         mfm_controller_info[drive_params->controller].name);
+         controller_info[drive_params->controller].name);
    }
    if (drive_params->num_sectors != 0) {
       safe_print(&cmdptr, &cmdleft, "--sectors %d,%d ",
@@ -161,7 +161,7 @@ char *parse_print_cmdline(DRIVE_PARAMS *drive_params, int print,
       }
    }
    if (drive_params->start_time_ns) {
-      safe_print(&cmdptr, &cmdleft, " --begin_time %u ", 
+      safe_print(&cmdptr, &cmdleft, " --begin_time %u ",
          drive_params->start_time_ns);
    }
    if (drive_params->emu_track_data_bytes != 0) {
@@ -243,13 +243,13 @@ static CRC_INFO parse_crc(char *arg) {
 
 // Set the drive parameter data by controller number
 //
-// drive_params: Drive parameters structure 
+// drive_params: Drive parameters structure
 // cont: Controller number
 //
-void parse_set_drive_params_from_controller(DRIVE_PARAMS *drive_params, 
+void parse_set_drive_params_from_controller(DRIVE_PARAMS *drive_params,
    int controller) {
 
-   CONTROLLER *contp = &mfm_controller_info[controller];
+   CONTROLLER *contp = &controller_info[controller];
 
    drive_params->num_sectors = contp->write_num_sectors;
    drive_params->first_sector_number = contp->write_first_sector_number;
@@ -261,6 +261,7 @@ void parse_set_drive_params_from_controller(DRIVE_PARAMS *drive_params,
    }
    drive_params->header_crc = contp->write_header_crc;
    drive_params->data_crc = contp->write_data_crc;
+   drive_params->is_rll = contp->is_rll;
    if (contp->flag & FLAG_XEBEC_SKEW) {
       drive_params->xebec_skew = 1;
    } else {
@@ -274,7 +275,7 @@ void parse_set_drive_params_from_controller(DRIVE_PARAMS *drive_params,
 //
 // arg: Controller string
 // ignore_invalid_option: Don't print if controller is invalid
-// drive_params: Drive parameters structure 
+// drive_params: Drive parameters structure
 // params_set: Returns if parameters set from CONT_MODEL
 // track_layout_format_only: True if we only allow formats that have
 //    track_layout set
@@ -283,11 +284,11 @@ static int parse_controller(char *arg, int ignore_invalid_options,
       DRIVE_PARAMS *drive_params, int *params_set, int track_layout_format_only) {
    int i;
    int controller = -1;
-#define VALID_CONTROLLER(i) (!track_layout_format_only || mfm_controller_info[i].track_layout != NULL)
+#define VALID_CONTROLLER(i) (!track_layout_format_only || controller_info[i].track_layout != NULL)
 
    *params_set = 0;
-   for (i = 0; mfm_controller_info[i].name != NULL; i++) {
-      if (strcasecmp(mfm_controller_info[i].name, arg) == 0 && VALID_CONTROLLER(i)) {
+   for (i = 0; controller_info[i].name != NULL; i++) {
+      if (strcasecmp(controller_info[i].name, arg) == 0 && VALID_CONTROLLER(i)) {
          controller = i;
       }
    }
@@ -297,15 +298,15 @@ static int parse_controller(char *arg, int ignore_invalid_options,
          controller = CONTROLLER_NONE;
       } else {
          msg(MSG_FATAL, "Unknown controller %s. Choices are\n",arg);
-         for (i = 0; mfm_controller_info[i].name != NULL; i++) {
+         for (i = 0; controller_info[i].name != NULL; i++) {
             if (VALID_CONTROLLER(i)) {
-               msg(MSG_FATAL,"%s\n",mfm_controller_info[i].name);
+               msg(MSG_FATAL,"%s\n",controller_info[i].name);
             }
          }
          exit(1);
       }
    } else {
-      if (mfm_controller_info[controller].analyze_search == CONT_MODEL) {
+      if (controller_info[controller].analyze_search == CONT_MODEL) {
 // TODO, this can be confusing since it overrides what is specified on the
 // command line. May be better way.
           parse_set_drive_params_from_controller(drive_params, controller);
@@ -347,9 +348,9 @@ static uint8_t *parse_interleave(char *arg, DRIVE_PARAMS *drive_params) {
       }
    }
    // If "" specified then return null for no sector list
-   if (i == 0) 
+   if (i == 0)
       return NULL;
-   else 
+   else
       return sectors;
 }
 
@@ -383,11 +384,11 @@ static int mark_bad_compare(const void *a, const void *b) {
    const MARK_BAD_INFO *mba, *mbb;
    mba = a;
    mbb = b;
-   if (mba->cyl > mbb->cyl || (mba->cyl == mbb->cyl && 
-         ((mba->head > mbb->head) || (mba->head == mbb->head && 
+   if (mba->cyl > mbb->cyl || (mba->cyl == mbb->cyl &&
+         ((mba->head > mbb->head) || (mba->head == mbb->head &&
            mba->sector > mbb->sector)))) {
       return 1;
-   }  else if (mba->cyl == mbb->cyl && mba->head == mbb->head && 
+   }  else if (mba->cyl == mbb->cyl && mba->head == mbb->head &&
           mba->sector == mbb->sector) {
       return 0;
    } else {
@@ -408,7 +409,7 @@ static MARK_BAD_INFO *parse_mark_bad(char *arg, DRIVE_PARAMS *drive_params) {
    str = arg;
    num_bad = 1;
    while (*str != 0) {
-      if (*str++ == ':') { 
+      if (*str++ == ':') {
          num_bad++;
       }
    }
@@ -420,7 +421,7 @@ static MARK_BAD_INFO *parse_mark_bad(char *arg, DRIVE_PARAMS *drive_params) {
       tok = strtok(str,":");
       if (sscanf(tok, "%d,%d,%d", &mark_bad_list[i].cyl, &mark_bad_list[i].head,
            &mark_bad_list[i].sector) != 3) {
-         msg(MSG_FATAL,"Error parsing mark bad list %s\n",tok); 
+         msg(MSG_FATAL,"Error parsing mark bad list %s\n",tok);
          exit(1);
       }
       mark_bad_list[i].last = 0;
@@ -473,9 +474,11 @@ static struct option long_options[] = {
          {"track_words", 1, NULL, 'w'},
          {"ignore_seek_errors", 0, NULL, 'I'},
          {"xebec_skew", 2, NULL, 'x'},
+         {"step", 1, NULL, 'S'},
+         {"external_stepper", 0, NULL, 'X'},
          {NULL, 0, NULL, 0}
 };
-static char short_options[] = "s:h:c:g:d:f:j:l:ui:3r:a::q:b:t:e:m:vn:M:w:Ix";
+static char short_options[] = "s:h:c:g:d:f:j:l:ui:3r:R:a::q:b:t:e:m:vn:M:w:Ix::S:X";
 
 // Main routine for parsing command lines
 //
@@ -483,10 +486,10 @@ static char short_options[] = "s:h:c:g:d:f:j:l:ui:3r:a::q:b:t:e:m:vn:M:w:Ix";
 // drive_parameters: Drive parameters where most of the parsed values are stored
 // delete_options: Options to delete from list of valid options (short option)
 // initialize: 1 if drive_params should be initialized with defaults
-// only_deleted: 1 if we only want to process options specified in 
+// only_deleted: 1 if we only want to process options specified in
 //    delete_options. Other options are ignored, not error
 // ignore_invalid_options: Don't exit if option is not known
-void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params, 
+void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
     char *delete_options, int initialize, int only_deleted,
     int ignore_invalid_options, int track_layout_format_only)
 {
@@ -504,7 +507,7 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
    if (only_deleted) {
       j = 0;
       for (i = 0; i < sizeof(short_options); i++) {
-         if (short_options[i] != ':' && 
+         if (short_options[i] != ':' &&
                strchr(delete_options, short_options[i]) == 0) {
             delete_list[j++] = short_options[i];
          }
@@ -553,7 +556,7 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
                msg(MSG_FATAL,"Valid options:\n");
                for (i = 0; long_options[i].name != NULL; i++) {
                  if (strchr(delete_options, long_options[i].val) == 0) {
-                    msg(MSG_FATAL, "%c %s\n", long_options[i].val, 
+                    msg(MSG_FATAL, "%c %s\n", long_options[i].val,
                        long_options[i].name);
                  }
                }
@@ -588,7 +591,7 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
             break;
          case 'h':
             drive_params->num_head = atoi(optarg);
-            if (drive_params->num_head <= 0 || 
+            if (drive_params->num_head <= 0 ||
                   drive_params->num_head > MAX_HEAD) {
                msg(MSG_FATAL,"Heads must be 1 to %d\n", MAX_HEAD);
                if (!ignore_invalid_options) {
@@ -621,19 +624,22 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
             drive_params->head_3bit = 1;
             break;
          case 'f':
-            drive_params->controller = parse_controller(optarg, 
-               ignore_invalid_options, drive_params, &params_set, track_layout_format_only);
-            // If not valid don't clear option set bit
-            if (drive_params->controller == -1) {
+	      {
+            int controller = parse_controller(optarg,
+                ignore_invalid_options, drive_params, &params_set, track_layout_format_only);
+            if (controller != -1) {
+               drive_params->controller = controller;
+            } else {
                drive_params->opt_mask &= ~(1 << options_index);
             }
             if (params_set) {
                drive_params->opt_mask |= controller_model_params;
             }
             break;
+         }
          case 'l':
             drive_params->sector_size = atoi(optarg);
-            if (drive_params->sector_size <= 0 || 
+            if (drive_params->sector_size <= 0 ||
                    drive_params->sector_size > MAX_SECTOR_SIZE) {
                msg(MSG_FATAL,"Sector size must be 1 to %d\n", MAX_SECTOR_SIZE);
                if (!ignore_invalid_options) {
@@ -668,7 +674,7 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
          case 'm':
             drive_params->emulation_filename = optarg;
             // Caller will correct if file is actually input.
-            drive_params->emulation_output = 1; 
+            drive_params->emulation_output = 1;
             break;
          case 'd':
             drive_params->drive = atoi(optarg);
@@ -706,6 +712,13 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
             // command line so we can use that
             drive_params->xebec_skew_cmdline = drive_params->xebec_skew;
             break;
+         case 'S':
+            drive_params->step = atoi(optarg);
+            break;
+         case 'X':
+            // Enable use of the external stepper controller
+            drive_params->ext_stepper = 1;
+            break;
          default:
             msg(MSG_FATAL, "Didn't process argument %c\n", rc);
             if (!ignore_invalid_options) {
@@ -740,7 +753,7 @@ void parse_validate_options(DRIVE_PARAMS *drive_params, int mfm_read) {
    } else {
       min_read_opts &= ~drive_opt;
    }
-   // Corvus H  and Cromemco drive doesn't have separate header and data 
+   // Corvus H  and Cromemco drive doesn't have separate header and data
    // CRC. We use header for both
    if (drive_params->controller == CONTROLLER_CORVUS_H ||
        drive_params->controller == CONTROLLER_CROMEMCO ||
@@ -760,7 +773,7 @@ void parse_validate_options(DRIVE_PARAMS *drive_params, int mfm_read) {
       }
       msg(MSG_FATAL, "\n");
       exit(1);
-   } 
+   }
    if (drive_params->controller != CONTROLLER_NONE
          && !drive_params->analyze && (drive_params->opt_mask & min_read_opts)
              != min_read_opts) {
@@ -773,16 +786,16 @@ void parse_validate_options(DRIVE_PARAMS *drive_params, int mfm_read) {
       }
       msg(MSG_FATAL, "\n");
       exit(1);
-   } 
-   if (mfm_read & (drive_params->transitions_filename != NULL || 
-         drive_params->emulation_filename != NULL) && 
-         !drive_params->analyze && 
+   }
+   if (mfm_read & (drive_params->transitions_filename != NULL ||
+         drive_params->emulation_filename != NULL) &&
+         !drive_params->analyze &&
         (drive_params->opt_mask & min_read_transitions_opts) !=
                min_read_transitions_opts) {
       msg(MSG_FATAL, "Generation of transition or emulation file without analyze requires options:\n");
       for (i = 0; i < 32; i++) {
          int bit = (1 << i);
-         if (!(drive_params->opt_mask & bit) && 
+         if (!(drive_params->opt_mask & bit) &&
                (min_read_transitions_opts & bit)) {
             msg(MSG_FATAL, " %s", long_options[i].name);
          }
@@ -798,7 +811,7 @@ void parse_validate_options_listed(DRIVE_PARAMS *drive_params, char *opt) {
 
    while (*opt != 0) {
       for (i = 0; i < ARRAYSIZE(long_options); i++) {
-          if ( (*opt == long_options[i].val) && 
+          if ( (*opt == long_options[i].val) &&
              !(drive_params->opt_mask & (1 << i)) ) {
             msg(MSG_FATAL, "Option %s must be specified\n", long_options[i].name);
             fatal = 1;

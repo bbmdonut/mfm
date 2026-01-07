@@ -30,11 +30,11 @@ int num_blocks = 4;
 // This contains the polynomial, polynomial length, CRC initial value,
 // and maximum span for ECC correction. Use span 0 for no ECC correction.
 typedef struct {
-   uint64_t init_value; 
+   uint64_t init_value;
    uint64_t poly;
    uint32_t length;
    uint32_t ecc_max_span;
-} CRC_INFO; 
+} CRC_INFO;
 
 // Reverse the bit order of v. 00100001b will become 10000100b
 // Not that efficient but we don't use it that often.
@@ -48,9 +48,9 @@ uint64_t crc_revbits(uint64_t v, int length)
    uint64_t ov;
    uint64_t stop;
 
-   if (length == 64) 
+   if (length == 64)
       stop = 0;
-   else 
+   else
       stop = (uint64_t) 1 << length;
 
    ov = 0;
@@ -64,7 +64,7 @@ uint64_t crc_revbits(uint64_t v, int length)
 }
 
 // Calculate the reverse CRC which gives you the 4 initial bytes
-// the CRC started with. 
+// the CRC started with.
 uint64_t crc64r(uint8_t byte, uint64_t crc, CRC_INFO *crc_info)
 {
    uint64_t poly;
@@ -179,7 +179,7 @@ void find_init(uint64_t poly, int sector)
 
    if (!(poly & 1)) {
       cout << "Poly LSB not one, using brute force\n";
-      
+
       if (crc_bytes != 8) {
          last_init = last_init & (((uint64_t) 1 << crc_bytes*8)-1);
       }
@@ -187,8 +187,8 @@ void find_init(uint64_t poly, int sector)
       if (crc64(&buf[sector], sect_bytes, &crc_info) == 0) {
          cout << "initial value " << hex << setw(crc_chars) << crc_info.init_value << endl;
       } else {
-         for (crc_info.init_value = 0; 
-               crc_info.init_value < ((uint64_t) 1 << crc_info.length); 
+         for (crc_info.init_value = 0;
+               crc_info.init_value < ((uint64_t) 1 << crc_info.length);
                crc_info.init_value++) {
             if ((crc_info.init_value & 0xfffff)  == 0) {
                cout << "Checking " << hex << setw(crc_chars) << crc_info.init_value << endl;
@@ -218,7 +218,7 @@ void find_init(uint64_t poly, int sector)
 	 }
       }
 
-      cout << "First 4 bytes " << hex << setfill('0') << setw(2) << 
+      cout << "First 4 bytes " << hex << setfill('0') << setw(2) <<
          +buf[sector] << setw(2) << +buf[sector+1] << setw(2) <<  +buf[sector+2] << setw(2) << +buf[sector+3] << endl;
       crc = 0;
       for (i = sect_bytes-1; i >= 0; i--) {
@@ -319,10 +319,10 @@ void check_2bit_matches(vector<int> matching_sectors, int first_byte)
          }
          if (last_bits != data[j].match_bits || j == matching_sectors.size()-1) {
             if (matched[0] != -1 && matched[1] != -1 && matched[2] != -1) {
-               do_poly2(data[matched[0]].crc, data[matched[1]].crc, 
+               do_poly2(data[matched[0]].crc, data[matched[1]].crc,
                  data[matched[2]].crc, data[matched[0]].sector_offset);
             } else if (matched[3] != -1 && matched[1] != -1 && matched[2] != -1) {
-               do_poly2(data[matched[3]].crc, data[matched[2]].crc, 
+               do_poly2(data[matched[3]].crc, data[matched[2]].crc,
                  data[matched[1]].crc, data[matched[3]].sector_offset);
             }
             fill(matched, end(matched), -1);
@@ -389,11 +389,11 @@ void check_3bit_matches(vector<int> matching_sectors, int first_byte)
          // seen. If so calculate the polynomail
          if (last_bits != data[j].match_bits || j == matching_sectors.size()-1) {
             if (matched[1] != -1 && matched[2] != -1 && matched[4] != -1) {
-               do_poly3(data[matched[1]].crc, data[matched[2]].crc, 
+               do_poly3(data[matched[1]].crc, data[matched[2]].crc,
                   data[matched[4]].crc, data[matched[1]].sector_offset);
-            } 
+            }
             if (matched[6] != -1 && matched[5] != -1 && matched[3] != -1) {
-               do_poly3(data[matched[6]].crc, data[matched[5]].crc, 
+               do_poly3(data[matched[6]].crc, data[matched[5]].crc,
                   data[matched[3]].crc, data[matched[6]].sector_offset);
             }
             fill(matched, end(matched), -1);
@@ -425,7 +425,7 @@ int main(int argc, char *argv[]) {
    data_bytes = sect_bytes - crc_bytes;
 
    len = read(STDIN_FILENO, buf, sizeof(buf));
-   
+
    if (len == sizeof(buf)) {
       cerr << "Increase file buffer size\n";
       return 1;
@@ -464,7 +464,7 @@ printf("i %d crc %llx\n",i, crc);
       if (print_count++ % 1024 == 0) {
          cout << "Processing sector " << print_count << " of " << len / sect_bytes << '\r';
       }
-      
+
       size_t h = hash_fn(string((char *) &buf[n], sect_bytes));
       vector<size_t>::iterator loc = find(unique_sectors.begin(), unique_sectors.end(), h);
       if (loc == unique_sectors.end()) {
@@ -491,17 +491,17 @@ printf("i %d crc %llx\n",i, crc);
              memcpy(&tbuf[b], &buf[unique_sectors_offset[i] + b + 2], data_bytes-b-2);
           }
 
-          struct hash_data_s hash_data; 
-             
+          struct hash_data_s hash_data;
+
           hash_data.hash = hash_fn(string((char *) tbuf, sect_bytes-1));
           hash_data.sect_offset = unique_sectors_offset[i];
           sect_hashes.push_back(hash_data);
        }
        sort(sect_hashes.begin(), sect_hashes.end());
-       
-       size_t last_hash = 0; 
+
+       size_t last_hash = 0;
        vector<int> matching_sectors;
-       // Build list of sectors with matching hash 
+       // Build list of sectors with matching hash
        // If sufficient number matches then check 2 bit and 3 bit
        // sequences for correct pattern
        for (unsigned int i = 0; i < sect_hashes.size(); i++) {

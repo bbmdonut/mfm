@@ -33,9 +33,9 @@
 *.dSYM/
 
 # Optional build dependencies
-am335x_pru_package-master
+am335x_pru_package*
 
-# Lstings
+# Listings
 prucode*.txt
 logfile.txt
 mfm_write*.txt
@@ -48,3 +48,7 @@ mfm/mfm_write
 mfm/find_crc_info
 powerfail/powerfail
 mfm/ext2emu
+
+# Doxygen build output
+doxygen/html
+doxygen/latex

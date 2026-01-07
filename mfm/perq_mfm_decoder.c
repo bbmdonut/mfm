@@ -1,6 +1,6 @@
 #define VCD 0
 // This routine decodes Perq formated disks. No documentation was found
-// for track format. 
+// for track format.
 //
 // Copyright 2022 David Gesswein.
 //
@@ -42,6 +42,7 @@
 
 #include "crc_ecc.h"
 #include "emu_tran_file.h"
+#include "decoder_common.h"
 #include "mfm_decoder.h"
 #include "msg.h"
 #include "deltas_read.h"
@@ -51,23 +52,9 @@ static unsigned char rev_lookup[16] = {
    0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf };
 #define REV_BYTE(n)( (rev_lookup[n&0xf] << 4) | rev_lookup[n>>4])
 
-
-// Type II PLL. Here so it will inline. Converted from continuous time
-// by bilinear transformation. Coefficients adjusted to work best with
-// my data. Could use some more work.
-static inline float filter(float v, float *delay)
-{
-   float in, out;
-                 
-   in = v + *delay;
-   out = in * 0.034446428576716f + *delay * -0.034124999994713f;
-   *delay = in;
-   return out;
-}
-
 // Decode bytes into header or sector data for the various formats we know about.
 // The decoded data will be written to a file if one was specified.
-// Since processing a header with errors can overwrite other good sectors this 
+// Since processing a header with errors can overwrite other good sectors this
 // routine shouldn't be called if data has a CRC error.
 //
 // The format names are arbitrarily assigned to the first controller found
@@ -84,7 +71,7 @@ static inline float filter(float v, float *delay)
 //
 //      The controller then looks for bit sequences for the start of the
 //      header. Raw MFM pattern 0xaa55, decoded 0xf0 is one of the patterns
-//      loaded into the controller RAM for finding the sector header. 
+//      loaded into the controller RAM for finding the sector header.
 //
 //      The sector has a 16 byte tag and then another 0xaa55 sync pattern
 //      followed by the sector data
@@ -92,7 +79,7 @@ static inline float filter(float v, float *delay)
 //      The LSB bit of the byte is written first instead of the normal MSB
 //      first.
 //
-//      sync 0xf0 
+//      sync 0xf0
 //      byte 0 low cylinder
 //      byte 1 head in low 4 bits. Upper 4 bits of cyl in upper 4 bits
 //      byte 2 sector
@@ -133,7 +120,7 @@ SECTOR_DECODE_STATUS perq_process_data(STATE_TYPE *state, uint8_t bytes[],
 
       if (drive_params->controller == CONTROLLER_PERQ_T2) {
          sector_status.cyl = REV_BYTE(bytes[0]) | ((REV_BYTE(bytes[1]) & 0xf0) << 4);
-         sector_status.head = mfm_fix_head(drive_params, exp_head, 
+         sector_status.head = mfm_fix_head(drive_params, exp_head,
             REV_BYTE(bytes[1])) & 0xf;
          sector_status.sector = REV_BYTE(bytes[2]);
          if (bytes[3] != 0x00) {
@@ -154,7 +141,7 @@ SECTOR_DECODE_STATUS perq_process_data(STATE_TYPE *state, uint8_t bytes[],
       bad_block = 0;
       msg(MSG_DEBUG,
          "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
-            exp_cyl, exp_head, sector_status.cyl, sector_status.head, 
+            exp_cyl, exp_head, sector_status.cyl, sector_status.head,
             sector_status.sector, sector_size, bad_block);
 
       if (crc != 0) {
@@ -197,7 +184,7 @@ SECTOR_DECODE_STATUS perq_process_data(STATE_TYPE *state, uint8_t bytes[],
       // sectors is not updated. We need to know the sector # to update
       // our statistics array. This happens with RQDX3
       if (!(sector_status.status & (SECT_BAD_HEADER | SECT_BAD_SECTOR_NUMBER))) {
-         int dheader_bytes = mfm_controller_info[drive_params->controller].data_header_bytes;
+         int dheader_bytes = controller_info[drive_params->controller].data_header_bytes;
          uint8_t rev_bytes[MAX_SECTOR_SIZE];
 
          for (i = dheader_bytes; i < dheader_bytes + drive_params->sector_size; i++) {
@@ -290,14 +277,14 @@ SECTOR_DECODE_STATUS perq_decode_track(DRIVE_PARAMS *drive_params, int cyl,
    int sector_index = 0;
    // Count all the raw bits for emulation file
    int all_raw_bits_count = 0;
-   // Time to look for next header in 200 MHz clock ticks. This will start 
+   // Time to look for next header in 200 MHz clock ticks. This will start
    // looking at data a little into the beggining 0 words
    int next_header_time;
-   // First address mark time in ns 
+   // First address mark time in ns
    int first_addr_mark_ns = 0;
 
    nominal_bit_sep_time = 200e6 /
-         mfm_controller_info[drive_params->controller].clk_rate_hz;
+         controller_info[drive_params->controller].clk_rate_hz;
    max_delta = nominal_bit_sep_time * 22;
    avg_bit_sep_time = nominal_bit_sep_time;
 
@@ -365,7 +352,7 @@ fprintf(out,"$var wire 1 & sector $end\n");
                raw_word, byte_cntr);
 #endif
          if (all_raw_bits_count + int_bit_pos >= 32) {
-            all_raw_bits_count = mfm_save_raw_word(drive_params, 
+            all_raw_bits_count = mfm_save_raw_word(drive_params,
                all_raw_bits_count, int_bit_pos, raw_word);
          } else {
             all_raw_bits_count += int_bit_pos;
@@ -388,7 +375,7 @@ fprintf(out,"$var wire 1 & sector $end\n");
 //printf("Raw %d %d %x %d %d\n",tot_raw_bit_cntr, sync_count, raw_word, track_time, next_header_time);
             // These patterns are MFM encoded all zeros or all ones.
             // We are looking for zeros so we assume they are zeros.
-            if (track_time > next_header_time && 
+            if (track_time > next_header_time &&
                  (raw_word == 0x55555555 || raw_word == 0xaaaaaaaa)) {
                sync_count++;
             } else {
@@ -414,7 +401,7 @@ fprintf(out,"$var wire 1 & sector $end\n");
 #if VCD
 bit_time = track_time / 198e6 * 1e12;
 fprintf(out,"#%lld\n1&\n", bit_time);
-printf("Found header at %d %d %d\n",tot_raw_bit_cntr, track_time, 
+printf("Found header at %d %d %d\n",tot_raw_bit_cntr, track_time,
    track_time + drive_params->start_time_ns / CLOCKS_TO_NS);
 #endif
                if (first_addr_mark_ns == 0) {
@@ -423,14 +410,14 @@ printf("Found header at %d %d %d\n",tot_raw_bit_cntr, track_time,
 
                if (state == HEADER_SYNC) {
                   // Figure out the length of data we should look for
-                  bytes_crc_len = mfm_controller_info[drive_params->controller].header_bytes + drive_params->header_crc.length / 8;
+                  bytes_crc_len = controller_info[drive_params->controller].header_bytes + drive_params->header_crc.length / 8;
                } else if (state == HEADER_SYNC2) {
                   // Figure out the length of data we should look for
                   bytes_crc_len = drive_params->metadata_bytes + drive_params->header_crc.length / 8;
                } else {
-                  bytes_crc_len = mfm_controller_info[drive_params->controller].data_header_bytes + drive_params->data_crc.length / 8 +
-                        drive_params->sector_size + 
-                        mfm_controller_info[drive_params->controller].data_trailer_bytes;
+                  bytes_crc_len = controller_info[drive_params->controller].data_header_bytes + drive_params->data_crc.length / 8 +
+                        drive_params->sector_size +
+                        controller_info[drive_params->controller].data_trailer_bytes;
                }
                // Time next header should start at
                if (drive_params->controller == CONTROLLER_PERQ_T2) {
@@ -443,7 +430,7 @@ printf("Found header at %d %d %d\n",tot_raw_bit_cntr, track_time,
                // In this format header is attached to data so both
                // will be processed in this state
                if (state == HEADER_SYNC) {
-                  mfm_mark_header_location(all_raw_bits_count, raw_bit_cntr, 
+                  mfm_mark_header_location(all_raw_bits_count, raw_bit_cntr,
                      tot_raw_bit_cntr);
                   state = PROCESS_HEADER;
                } else if (state == HEADER_SYNC2) {
@@ -486,14 +473,14 @@ fprintf(out,"#%lld\n%d^\n#%lld\n%d^\n", bit_time,
                   if (byte_cntr < bytes_needed) {
                      bytes[byte_cntr++] = decoded_word;
 //printf("Decoded %d  %d %08x\n",byte_cntr, tot_raw_bit_cntr, decoded_word);
-                  } 
+                  }
                   if (byte_cntr == bytes_needed) {
 #if VCD
 fprintf(out,"#%lld\n0&\n", bit_time);
 #endif
                      mfm_mark_end_data(all_raw_bits_count, drive_params, head, cyl);
                      sector_status |= mfm_process_bytes(drive_params, bytes,
-                        bytes_crc_len, bytes_needed, &state, cyl, head, 
+                        bytes_crc_len, bytes_needed, &state, cyl, head,
                         &sector_index, seek_difference, sector_status_list, 0);
                   }
                   decoded_bit_cntr = 0;
@@ -515,7 +502,7 @@ fprintf(out,"#%lld\n0&\n", bit_time);
         (state == PROCESS_DATA && sector_index <= drive_params->num_sectors) ) {
       float begin_time =
          ((bytes_needed - byte_cntr) * 16.0 *
-             1e9/mfm_controller_info[drive_params->controller].clk_rate_hz
+             1e9/controller_info[drive_params->controller].clk_rate_hz
              + first_addr_mark_ns) / 2 + drive_params->start_time_ns;
       msg(MSG_ERR, "Ran out of data on sector index %d, try adding --begin_time %.0f to mfm_read command line\n",
          sector_index, round(begin_time / 1000.0) * 1000.0);

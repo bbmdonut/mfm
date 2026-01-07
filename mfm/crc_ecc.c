@@ -49,9 +49,9 @@ uint64_t crc_revbits(uint64_t v, int length)
    uint64_t ov;
    uint64_t stop;
 
-   if (length == 64) 
+   if (length == 64)
       stop = 0;
-   else 
+   else
       stop = (uint64_t) 1 << length;
 
    ov = 0;
@@ -125,12 +125,12 @@ int ecc64(uint8_t bytes[], int num_bytes, uint64_t syndrome, CRC_INFO *crc_info)
    int index, bit;
    int bits_left;
    uint64_t poly;
-   uint64_t crc_mask = (((uint64_t) 1 << 
+   uint64_t crc_mask = (((uint64_t) 1 <<
          (crc_info->length - crc_info->ecc_max_span)) - 1) <<
          (crc_info->ecc_max_span);
 
    span = 0;
-   syndrome = crc_revbits(syndrome, crc_info->length); 
+   syndrome = crc_revbits(syndrome, crc_info->length);
    poly = ((crc_revbits(crc_info->poly, crc_info->length) << 1) | 1);
    // Stop when span is non zero (correction found)
    for (index = num_bytes; index > 0 && span == 0; index--) {
@@ -178,7 +178,7 @@ uint64_t checksum64(uint8_t *bytes, int num_bytes, CRC_INFO *crc_info)
 
    for (i = 0; i < num_bytes; i++) {
       sum += bytes[i];
-   }  
+   }
    // Trim the result to the requested num_bytes
    if (crc_info->length == 64)
       return sum;

@@ -1,16 +1,16 @@
 // This routine decodes "Western Digital" (WD) formated disks with two
-// headers on each sector. 
+// headers on each sector.
 //
-// TODO Improve data separator and resync better after end of 
+// TODO Improve data separator and resync better after end of
 // write transition area. Also why avg_bit_sep_time is < 20 for all drives
-// We probably should be able to do better than just the PLL since we can 
+// We probably should be able to do better than just the PLL since we can
 // look ahead.
 //
 // 12/08/22 DJG Changed error message
 // 07/20/22 DJG Process sector if bytes decoded exactly matches needed
 // 03/17/22 DJG Handle large deltas and improved error message
 // 07/05/19 DJG Improved 3 bit head field handling
-// 04/22/18 DJG Added support for non 10 MHz bit rate and 
+// 04/22/18 DJG Added support for non 10 MHz bit rate and
 //    format Xerox 8010
 // 04/21/17 DJG Added parameter to mfm_check_header_values and added
 //    determining --begin_time if needed
@@ -20,7 +20,7 @@
 // 10/16/16 DJG Fixes for XEROX_6085.
 // 10/07/16 DJG Add support for disks with tag header in addition to the
 //    normal header. Xerox 6085
-//   
+//
 // Copyright 2022 David Gesswein.
 // This file is part of MFM disk utilities.
 //
@@ -54,24 +54,11 @@
 #include "mfm_decoder.h"
 #include "deltas_read.h"
 
-// Side of data to skip after header or data area. 
+// Side of data to skip after header or data area.
 #define HEADER_IGNORE_BYTES 10
 // For data this is the write splice area where you get corrupted data that
 // may look like a sector start byte.
 #define DATA_IGNORE_BYTES 10
-
-// Type II PLL. Here so it will inline. Converted from continuous time
-// by bilinear transformation. Coefficients adjusted to work best with
-// my data. Could use some more work.
-static inline float filter(float v, float *delay)
-{
-   float in, out;
-
-   in = v + *delay;
-   out = in * 0.034446428576716f + *delay * -0.034124999994713f;
-   *delay = in;
-   return out;
-}
 
 // Decode bytes into header or sector data for the various formats we know about.
 // The decoded data will be written to a file if one was specified.
@@ -100,14 +87,14 @@ static inline float filter(float v, float *delay)
 //   Data
 //      byte 0 0xa1
 //      byte 1 0xfb
-//      Sector data for sector size 
+//      Sector data for sector size
 //         (alt cyl first 2 bytes msb first, head third. Also not known
 //          if correct for this format)
 //      ECC code (2 byte)
 //
 //   CONTROLLER_TELENEX_AUTOSCOPE
 //      Same as XEROX_6085 except no tag
-//      
+//
 //   CONTROLLER_XEROX_8010. Found on 8" SA1004 drive. Best guess at what
 //      used with
 //      Quantum image xerox-1108-chinacat-q2040.trans
@@ -128,7 +115,7 @@ static inline float filter(float v, float *delay)
 //   Data
 //      byte 0 0xa1
 //      byte 1 0x43
-//      Sector data for sector size 
+//      Sector data for sector size
 //      16 bit CRC 0xffff,0x8005,16
 //
 // state: Current state in the decoding
@@ -150,7 +137,7 @@ SECTOR_DECODE_STATUS tagged_process_data(STATE_TYPE *state, uint8_t bytes[],
       int total_bytes,
       uint64_t crc, int exp_cyl, int exp_head, int *sector_index,
       DRIVE_PARAMS *drive_params, int *seek_difference,
-      SECTOR_STATUS sector_status_list[], int ecc_span, 
+      SECTOR_STATUS sector_status_list[], int ecc_span,
       SECTOR_DECODE_STATUS init_status)
 {
    static int sector_size;
@@ -210,7 +197,7 @@ SECTOR_DECODE_STATUS tagged_process_data(STATE_TYPE *state, uint8_t bytes[],
 
       msg(MSG_DEBUG,
          "Got exp %d,%d cyl %d head %d sector %d,%d size %d\n",
-            exp_cyl, exp_head, sector_status.cyl, sector_status.head, 
+            exp_cyl, exp_head, sector_status.cyl, sector_status.head,
             sector_status.sector, *sector_index, sector_size);
       if ((drive_params->controller == CONTROLLER_XEROX_6085) ||
        (drive_params->controller == CONTROLLER_XEROX_8010)) {
@@ -254,7 +241,7 @@ SECTOR_DECODE_STATUS tagged_process_data(STATE_TYPE *state, uint8_t bytes[],
       }
       int id_byte_index = 1;
       if (bytes[id_byte_index] != id_byte_expected && crc == 0) {
-         msg(MSG_INFO,"Invalid data id byte %02x expected %02x on cyl %d head %d sector %d\n", 
+         msg(MSG_INFO,"Invalid data id byte %02x expected %02x on cyl %d head %d sector %d\n",
                bytes[id_byte_index], id_byte_expected,
                sector_status.cyl, sector_status.head, sector_status.sector);
          sector_status.status |= SECT_BAD_DATA;
@@ -267,7 +254,7 @@ SECTOR_DECODE_STATUS tagged_process_data(STATE_TYPE *state, uint8_t bytes[],
       }
       sector_status.ecc_span_corrected_data = ecc_span;
       if (!(sector_status.status & SECT_BAD_HEADER)) {
-         int dheader_bytes = mfm_controller_info[drive_params->controller].data_header_bytes;
+         int dheader_bytes = controller_info[drive_params->controller].data_header_bytes;
 
          if (mfm_write_sector(&bytes[dheader_bytes], drive_params, &sector_status,
                sector_status_list, &bytes[1], total_bytes-1) == -1) {
@@ -290,7 +277,7 @@ SECTOR_DECODE_STATUS tagged_process_data(STATE_TYPE *state, uint8_t bytes[],
 // sector_status_list: Return of status of decoded sector
 // return: Or together of the status of each sector decoded
 SECTOR_DECODE_STATUS tagged_decode_track(DRIVE_PARAMS *drive_params, int cyl,
-      int head, uint16_t deltas[], int *seek_difference, 
+      int head, uint16_t deltas[], int *seek_difference,
       SECTOR_STATUS sector_status_list[])
 {
    // This is which MFM clock and data bits are valid codes. So far haven't
@@ -361,14 +348,14 @@ SECTOR_DECODE_STATUS tagged_decode_track(DRIVE_PARAMS *drive_params, int cyl,
    // Used for analyze to distinguish formats with and without extra
    // header
    SECTOR_DECODE_STATUS init_status = 0;
-   // First address mark time in ns 
+   // First address mark time in ns
    int first_addr_mark_ns = 0;
 
 
    num_deltas = deltas_get_count(0);
    raw_word = 0;
    nominal_bit_sep_time = 200e6 /
-       mfm_controller_info[drive_params->controller].clk_rate_hz;
+       controller_info[drive_params->controller].clk_rate_hz;
    max_delta = nominal_bit_sep_time * 22;
    avg_bit_sep_time = nominal_bit_sep_time;
    i = 1;
@@ -478,21 +465,21 @@ last_tot_raw_bit_cntr = tot_raw_bit_cntr;
                   state = PROCESS_HEADER;
                   mfm_mark_header_location(all_raw_bits_count, 0, tot_raw_bit_cntr);
                   // Figure out the length of data we should look for
-                  bytes_crc_len = mfm_controller_info[drive_params->controller].header_bytes + 
+                  bytes_crc_len = controller_info[drive_params->controller].header_bytes +
                         drive_params->header_crc.length / 8;
                   bytes_needed = bytes_crc_len + HEADER_IGNORE_BYTES;
                } else if (state == MARK_DATA1) {
                   state = PROCESS_HEADER2;
                   // Figure out the length of data we should look for
-                  bytes_crc_len = 2 + mfm_controller_info[drive_params->controller].metadata_bytes + 
+                  bytes_crc_len = 2 + controller_info[drive_params->controller].metadata_bytes +
                         drive_params->header_crc.length / 8;
                   bytes_needed = bytes_crc_len + HEADER_IGNORE_BYTES;
                } else {
                   state = PROCESS_DATA;
                   mfm_mark_data_location(all_raw_bits_count, 0, tot_raw_bit_cntr);
                   // Figure out the length of data we should look for
-                  bytes_crc_len = mfm_controller_info[drive_params->controller].data_header_bytes + 
-                        mfm_controller_info[drive_params->controller].data_trailer_bytes + 
+                  bytes_crc_len = controller_info[drive_params->controller].data_header_bytes +
+                        controller_info[drive_params->controller].data_trailer_bytes +
                         drive_params->sector_size +
                         drive_params->data_crc.length / 8;
                   bytes_needed = DATA_IGNORE_BYTES + bytes_crc_len;
@@ -538,7 +525,7 @@ last_tot_raw_bit_cntr = tot_raw_bit_cntr;
                               // Flag error for analyze
                               init_status = SECT_ANALYZE_ERROR;
                               msg(MSG_INFO,"Found sector header out of order (state %d)\n", state);
-                              bytes_crc_len = mfm_controller_info[drive_params->controller].header_bytes + 
+                              bytes_crc_len = controller_info[drive_params->controller].header_bytes +
                                   drive_params->header_crc.length / 8;
                               bytes_needed = bytes_crc_len + HEADER_IGNORE_BYTES;
                               state = PROCESS_HEADER;
@@ -548,7 +535,7 @@ last_tot_raw_bit_cntr = tot_raw_bit_cntr;
                               // Flag error for analyze
                               init_status = SECT_ANALYZE_ERROR;
                               msg(MSG_INFO,"Found tag header out of order (state %d)\n", state);
-                              bytes_crc_len = 22 + 
+                              bytes_crc_len = 22 +
                                  drive_params->header_crc.length / 8;
                               bytes_needed = bytes_crc_len + HEADER_IGNORE_BYTES;
                               state = PROCESS_HEADER2;
@@ -558,8 +545,8 @@ last_tot_raw_bit_cntr = tot_raw_bit_cntr;
                               msg(MSG_INFO,"Found data header out of order (state %d)\n", state);
                               // Flag error for analyze
                               init_status = SECT_ANALYZE_ERROR;
-                              bytes_crc_len = mfm_controller_info[drive_params->controller].data_header_bytes + 
-                                  mfm_controller_info[drive_params->controller].data_trailer_bytes + 
+                              bytes_crc_len = controller_info[drive_params->controller].data_header_bytes +
+                                  controller_info[drive_params->controller].data_trailer_bytes +
                                   drive_params->sector_size +
                                   drive_params->data_crc.length / 8;
                               bytes_needed = DATA_IGNORE_BYTES + bytes_crc_len;
@@ -567,11 +554,11 @@ last_tot_raw_bit_cntr = tot_raw_bit_cntr;
                            }
                         }
                      }
-                  } 
+                  }
                   if (byte_cntr == bytes_needed) {
                      mfm_mark_end_data(all_raw_bits_count, drive_params, cyl, head);
                      all_sector_status |= mfm_process_bytes(drive_params, bytes,
-                         bytes_crc_len, bytes_needed, &state, cyl, head, 
+                         bytes_crc_len, bytes_needed, &state, cyl, head,
                          &sector_index, seek_difference, sector_status_list,
                          init_status);
                   }
@@ -592,14 +579,14 @@ last_tot_raw_bit_cntr = tot_raw_bit_cntr;
    if (state == PROCESS_DATA && sector_index <= drive_params->num_sectors) {
       float begin_time =
          ((bytes_needed - byte_cntr) * 16.0 *
-             1e9/mfm_controller_info[drive_params->controller].clk_rate_hz
+             1e9/controller_info[drive_params->controller].clk_rate_hz
              + first_addr_mark_ns) / 2 + drive_params->start_time_ns;
       msg(MSG_ERR, "Ran out of data on sector index %d, try adding --begin_time %.0f to mfm_read command line\n",
          sector_index, round(begin_time / 1000.0) * 1000.0);
    }
 
    // Force last partial word to be saved
-   mfm_save_raw_word(drive_params, all_raw_bits_count, 32-all_raw_bits_count, 
+   mfm_save_raw_word(drive_params, all_raw_bits_count, 32-all_raw_bits_count,
       raw_word);
    // If we didn't find anything to decode return header error
    if (all_sector_status == SECT_NO_STATUS) {

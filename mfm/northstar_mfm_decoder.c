@@ -1,6 +1,6 @@
-// This routine decodes NorthStar formated disks and other with similar format. 
+// This routine decodes NorthStar formated disks and other with similar format.
 //
-// TODO: Too much code is being duplicated adding new formats. 
+// TODO: Too much code is being duplicated adding new formats.
 //
 // 05/19/24 DJG Changed filter_state to not be static. Bad data can cause it
 //    to get stuck in state that will prevent decoding following tracks.
@@ -54,20 +54,6 @@
 #include "msg.h"
 #include "deltas_read.h"
 
-
-// Type II PLL. Here so it will inline. Converted from continuous time
-// by bilinear transformation. Coefficients adjusted to work best with
-// my data. Could use some more work.
-static inline float filter(float v, float *delay)
-{
-   float in, out;
-                 
-   in = v + *delay;
-   out = in * 0.034446428576716f + *delay * -0.034124999994713f;
-   *delay = in;
-   return out;
-}
-
 // Compare two uint16_t values
 int cmp_uint16_t(const void *p1, const void *p2)
 {
@@ -76,7 +62,7 @@ int cmp_uint16_t(const void *p1, const void *p2)
 
 // Decode bytes into header or sector data for the various formats we know about.
 // The decoded data will be written to a file if one was specified.
-// Since processing a header with errors can overwrite other good sectors this 
+// Since processing a header with errors can overwrite other good sectors this
 // routine shouldn't be called if data has a CRC error.
 //
 // The format names are arbitrarily assigned to the first controller found
@@ -94,7 +80,7 @@ int cmp_uint16_t(const void *p1, const void *p2)
 //      512 bytes data
 //      16 bit checksum of data
 //      16 bit complement of checksum of data
-//   Track format information 
+//   Track format information
 //      http://www.classiccmp.org/dunfield/miscpm/advtech.pdf (pg 3-47)
 //   The format is 187 0xff, 3 0x55, 40 0xff at start of track.
 //   Each sector starts with 67 0x00, 0x01, 9 byte header, 512 data bytes,
@@ -107,8 +93,8 @@ int cmp_uint16_t(const void *p1, const void *p2)
 //   sector based on it. This code does not implement that method.
 //
 //   The timing doesn't match real captures with the above formatting. The
-//   data in mfm_decoder.h has been adjusted to match captured data. 
-//      
+//   data in mfm_decoder.h has been adjusted to match captured data.
+//
 //   CONTROLLER_SUPERBRAIN
 //    superbrain2.trans
 //    Not Northstar but seemed to match this logic the best of the decoders.
@@ -153,7 +139,7 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
    static SECTOR_STATUS sector_status;
    // Set if track has flag set that it may have an alternate assigned. Need
    // to process sector data to get remapping info
-   static int alt_assigned = 0; 
+   static int alt_assigned = 0;
 
    if (*state == PROCESS_HEADER) {
       alt_assigned = 0;
@@ -173,7 +159,7 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
 	 bad_block = 0;
 	 msg(MSG_DEBUG,
 	    "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
-	       exp_cyl, exp_head, sector_status.cyl, sector_status.head, 
+	       exp_cyl, exp_head, sector_status.cyl, sector_status.head,
 	       sector_status.sector, sector_size, bad_block);
 
 	 mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
@@ -197,7 +183,7 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
 
 	 msg(MSG_DEBUG,
 	    "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
-	       exp_cyl, exp_head, sector_status.cyl, sector_status.head, 
+	       exp_cyl, exp_head, sector_status.cyl, sector_status.head,
 	       sector_status.sector, sector_size, bad_block);
 
 	 mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
@@ -239,7 +225,7 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
          } else {
 	    msg(MSG_DEBUG,
 	       "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
-	          exp_cyl, exp_head, sector_status.cyl, sector_status.head, 
+	          exp_cyl, exp_head, sector_status.cyl, sector_status.head,
 	          sector_status.sector, sector_size, bad_block);
 
 	    mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
@@ -283,7 +269,7 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
          count = 1;
          // Real controller knows where alternate cylinders start
          // For one sample they started at 1011. Since that may be
-         // different on different drives we say if we find all except 
+         // different on different drives we say if we find all except
          // max_different repeated values its the remapping data otherwise
          // its a spare cylinder. Not guaranteed to get it correct.
          int max_different = 30;
@@ -306,9 +292,9 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
          if (new_map != 0) {
             int new_head = new_map & 0x1f;
             int new_cyl = new_map >> 5;
-            if (new_cyl > sector_status.cyl && 
+            if (new_cyl > sector_status.cyl &&
                  new_head < drive_params->num_head) {
-               mfm_handle_alt_track_ch(drive_params, sector_status.cyl, 
+               mfm_handle_alt_track_ch(drive_params, sector_status.cyl,
                  sector_status.head,  new_cyl, new_head);
                if (new_map != last_remap) {
                   msg(MSG_INFO, "Remapping cyl,track %d,%d to %d,%d\n",
@@ -318,12 +304,12 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
             } else {
                msg(MSG_ERR, "Ignored invalid bad track remap of %d,%d to %d,%d\n",
                    sector_status.cyl, sector_status.head,  new_cyl, new_head);
-               
+
             }
          }
       }
 
-   
+
       if (!(sector_status.status & SECT_BAD_HEADER)) {
          if (mfm_write_sector(&bytes[0], drive_params, &sector_status,
                sector_status_list, &bytes[0], total_bytes) == -1) {
@@ -415,7 +401,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
    int all_raw_bits_count = 0;
    // Time to look for next header. This should be in beginning of 0 words
    int next_header_time = 0;
-   // First address mark time in ns 
+   // First address mark time in ns
    int first_addr_mark_ns = 0;
 
    if (drive_params->controller == CONTROLLER_NORTHSTAR_ADVANTAGE) {
@@ -425,7 +411,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
    } else if (drive_params->controller == CONTROLLER_ND100_3041) {
       next_header_time = 4230;
    } else {
-      msg(MSG_FATAL,"northstart_mfm_decoder got unknwon controller %d\n", 
+      msg(MSG_FATAL,"northstart_mfm_decoder got unknwon controller %d\n",
          drive_params->controller);
    }
 
@@ -436,7 +422,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
 
    raw_word = 0;
    nominal_bit_sep_time = 200e6 /
-       mfm_controller_info[drive_params->controller].clk_rate_hz;
+       controller_info[drive_params->controller].clk_rate_hz;
    max_delta = nominal_bit_sep_time * 22;
    avg_bit_sep_time = nominal_bit_sep_time;
    i = 1;
@@ -481,7 +467,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
                raw_word);
 #endif
          if (all_raw_bits_count + int_bit_pos >= 32) {
-            all_raw_bits_count = mfm_save_raw_word(drive_params, 
+            all_raw_bits_count = mfm_save_raw_word(drive_params,
                all_raw_bits_count, int_bit_pos, raw_word);
          } else {
             all_raw_bits_count += int_bit_pos;
@@ -504,7 +490,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
          if (state == MARK_ID) {
             // These patterns are MFM encoded all zeros or all ones.
             // We are looking for zeros so we assume they are zeros.
-            if (track_time > next_header_time && 
+            if (track_time > next_header_time &&
                  (raw_word == 0x55555555 || raw_word == 0xaaaaaaaa)) {
                sync_count++;
             } else {
@@ -555,7 +541,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
                mfm_mark_header_location(all_raw_bits_count, raw_bit_cntr,
                   tot_raw_bit_cntr);
                // Figure out the length of data we should look for
-               bytes_crc_len = mfm_controller_info[drive_params->controller].header_bytes +
+               bytes_crc_len = controller_info[drive_params->controller].header_bytes +
                         drive_params->header_crc.length / 8;
                bytes_needed = bytes_crc_len;
 
@@ -570,8 +556,8 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
 //printf("Start data %d\n",tot_raw_bit_cntr);
             mfm_mark_data_location(all_raw_bits_count, 0, tot_raw_bit_cntr);
             // Figure out the length of data we should look for
-            bytes_crc_len = mfm_controller_info[drive_params->controller].data_header_bytes +
-                mfm_controller_info[drive_params->controller].data_trailer_bytes +
+            bytes_crc_len = controller_info[drive_params->controller].data_header_bytes +
+                controller_info[drive_params->controller].data_trailer_bytes +
 
                 drive_params->sector_size +
                 drive_params->data_crc.length / 8;
@@ -613,8 +599,8 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
    //printf("Start data %d\n",tot_raw_bit_cntr);
 	       mfm_mark_data_location(all_raw_bits_count, 0, tot_raw_bit_cntr);
 	       // Figure out the length of data we should look for
-	       bytes_crc_len = mfm_controller_info[drive_params->controller].data_header_bytes +
-		   mfm_controller_info[drive_params->controller].data_trailer_bytes +
+	       bytes_crc_len = controller_info[drive_params->controller].data_header_bytes +
+		   controller_info[drive_params->controller].data_trailer_bytes +
 
 		   drive_params->sector_size +
 		   drive_params->data_crc.length / 8;
@@ -629,7 +615,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
 	       }
                byte_cntr = 0;
             }
- 
+
          } else { // PROCESS_HEADER or PROCESS_DATA
             int entry_state = state;
             // If we have enough bits to decode do so. Stop if state changes
@@ -650,18 +636,18 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
                      mfm_mark_end_data(all_raw_bits_count, drive_params, cyl, head);
 //printf("End data %d,%d state %d cyl %d head %d sect %d\n",tot_raw_bit_cntr, 166666 - (track_time  * 5 + drive_params->start_time_ns)/100, state, cyl, head, sector_index);
                      sector_status |= mfm_process_bytes(drive_params, bytes,
-                        bytes_crc_len, bytes_needed, &state, cyl, head, 
+                        bytes_crc_len, bytes_needed, &state, cyl, head,
                         &sector_index, seek_difference, sector_status_list, 0);
                      // Look after the fill bytes. 8 is byte to bits, 40 is
                      // 200 MHz clocks per data bit (5 MHz for data bit,
                      // 10 for clock and data bit)
                      if (drive_params->controller == CONTROLLER_NORTHSTAR_ADVANTAGE) {
                         // 45 bytes plus extra to get past any junk from overwriting
-                        next_header_time = track_time + 55 * 8 * 40; 
+                        next_header_time = track_time + 55 * 8 * 40;
                      } else if (drive_params->controller == CONTROLLER_SUPERBRAIN) {
-                        next_header_time = track_time + 5 * 8 * 40; 
+                        next_header_time = track_time + 5 * 8 * 40;
                      } else if (drive_params->controller == CONTROLLER_ND100_3041) {
-                        next_header_time = track_time + 20 * 40; 
+                        next_header_time = track_time + 20 * 40;
                      }
                   }
                   decoded_bit_cntr = 0;
@@ -681,7 +667,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
    if (state == PROCESS_DATA && sector_index <= drive_params->num_sectors) {
       float begin_time =
          ((bytes_needed - byte_cntr) * 16.0 *
-             1e9/mfm_controller_info[drive_params->controller].clk_rate_hz
+             1e9/controller_info[drive_params->controller].clk_rate_hz
              + first_addr_mark_ns) / 2 + drive_params->start_time_ns;
       msg(MSG_ERR, "Ran out of data on sector index %d, try adding --begin_time %.0f to mfm_read command line\n",
          sector_index, round(begin_time / 1000.0) * 1000.0);

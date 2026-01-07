@@ -161,7 +161,7 @@ int  pru_setup(int num_pru_in)
       return -1;
    }
 #ifdef PRU_DATARAM_ADDR
-   pru_write_word(MEM_PRU0_DATA, PRU_DATARAM_ADDR,  
+   pru_write_word(MEM_PRU0_DATA, PRU_DATARAM_ADDR,
       prussdrv_get_phys_addr((void *) pru_dataram0));
 #endif
 
@@ -170,7 +170,7 @@ int  pru_setup(int num_pru_in)
       return -1;
    }
 #ifdef PRU_DATARAM_ADDR
-   pru_write_word(MEM_PRU1_DATA, PRU_DATARAM_ADDR,  
+   pru_write_word(MEM_PRU1_DATA, PRU_DATARAM_ADDR,
       prussdrv_get_phys_addr((void *) pru_dataram1));
 #endif
 
@@ -255,7 +255,7 @@ int pru_exec_cmd(uint32_t cmd, uint32_t data)
    };
    // If not an expected result print an error message
    if (cmd_word != CMD_STATUS_OK && cmd_word != CMD_STATUS_READ_STARTED) {
-      msg(MSG_ERR, "Command %d fault %x status %x\n", cmd, 
+      msg(MSG_ERR, "Command %d fault %x status %x\n", cmd,
          cmd_word, pru_read_word(MEM_PRU0_DATA, PRU0_STATUS));
       return cmd_word;
    }
@@ -427,7 +427,7 @@ int pru_read_mem(MEM_TYPE mem_type, void *data, int len, int offset)
 }
 
 // Write a word to memory. Offset is in bytes from start of memory type
-// 
+//
 // mem_type: Type of memory to read
 // offset: Offset into memory in bytes
 // return: Memory contents
@@ -442,7 +442,7 @@ uint32_t pru_read_word(MEM_TYPE mem_type, int offset) {
    return *mem_ptr_32;
 }
 
-// Write a word to memory. 
+// Write a word to memory.
 //
 // mem_type: Type of memory to write
 // offset: Offset into memory in bytes
@@ -474,9 +474,9 @@ static void wait_bits(uint32_t *ptr, uint32_t mask, uint32_t value, char *desc) 
          good = 1;
       } else {
          usleep(1000); // wait 1 millisecond/
-      } 
+      }
    }
-   if (!good) { 
+   if (!good) {
       msg(MSG_FATAL, "Didn't get %x waiting for %s mask %x reg value %x\n",
          value, desc, mask, *ptr);
       exit(1);
@@ -502,7 +502,7 @@ uint32_t pru_set_clock(uint32_t tgt_bitrate_hz, int halt) {
      int mult;
      int post_divide;
    } rates[] = {
-      // This assumes input clock is 24 MHz. We pre divide by 1, multiply by 
+      // This assumes input clock is 24 MHz. We pre divide by 1, multiply by
       // 33 and divide by 4 to get clock of 198 MHz. That
       // divided by 18 gives desired 11 MHz bit rate.
       { 11000000, 1, 33, 4},
@@ -522,7 +522,7 @@ uint32_t pru_set_clock(uint32_t tgt_bitrate_hz, int halt) {
    int ndx;
 
    fd = open("/dev/uio/prcm/module", O_RDWR);
-   ptr = mmap(0, map_length, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 
+   ptr = mmap(0, map_length, PROT_READ | PROT_WRITE, MAP_SHARED, fd,
       0);
    if (ptr == MAP_FAILED) {
       // Fall back to /dev/mem for older setups
@@ -536,7 +536,7 @@ uint32_t pru_set_clock(uint32_t tgt_bitrate_hz, int halt) {
    }
    // Halt so switching clock doesn't mess up PRU
    for (pru_num = 0; pru_num < 2 && halt == PRU_SET_CLOCK_HALT; pru_num++) {
-      orig_control_reg[pru_num] = pru_read_word(data_mem_type[pru_num], 
+      orig_control_reg[pru_num] = pru_read_word(data_mem_type[pru_num],
          PRU_CONTROL_REG);
       pru_write_word(data_mem_type[pru_num], PRU_CONTROL_REG,
          orig_control_reg[pru_num] & ~2);
@@ -551,7 +551,7 @@ uint32_t pru_set_clock(uint32_t tgt_bitrate_hz, int halt) {
             break;
          }
       }
-      if (ndx >= ARRAYSIZE(rates)) { 
+      if (ndx >= ARRAYSIZE(rates)) {
          msg(MSG_FATAL, "Don't know how to set target bitrate to %d Hz\n",
             tgt_bitrate_hz);
          exit(1);
@@ -562,7 +562,7 @@ uint32_t pru_set_clock(uint32_t tgt_bitrate_hz, int halt) {
       // Set to bypass so we can update
       *(ptr + CM_CLKMODE_DPLL_DISP/4) = 4;
       wait_bits(ptr + CM_IDLEST_DPLL_DISP/4, 0x100, 0x100, "PLL bypass");
-      *(ptr + CM_CLKSEL_DPLL_DISP/4) = (rates[ndx].mult << 8) | 
+      *(ptr + CM_CLKSEL_DPLL_DISP/4) = (rates[ndx].mult << 8) |
          (rates[ndx].pre_divide - 1);
       *(ptr + CM_DIV_M2_DPLL_DISP/4) = 0x100 | rates[ndx].post_divide;
       // Enable PLL
@@ -571,7 +571,7 @@ uint32_t pru_set_clock(uint32_t tgt_bitrate_hz, int halt) {
       wait_bits(ptr + CM_IDLEST_DPLL_DISP/4, 0x101, 0x1,"Locked and not bypass");
       // Select display clock for PRU
       *(ptr + CLKSEL_PRU_ICSS_OCP_CLK/4) = 1;
-      rc = 24000000 / rates[ndx].pre_divide * rates[ndx].mult / 
+      rc = 24000000 / rates[ndx].pre_divide * rates[ndx].mult /
          rates[ndx].post_divide;
    }
    // Restore PRU state

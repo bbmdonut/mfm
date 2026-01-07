@@ -6,6 +6,11 @@ wait_writeable() {
    done
 }
 
+if pgrep -x "mfm_emu" > /dev/null; then
+   echo "mfm_emu is running. Stop process before running this script."
+   exit 1
+fi
+
 KERNEL_VER=$(uname -r | cut -f1 -d.)
 
 #Files are in same directory as script
@@ -21,7 +26,7 @@ else
    DTBOC="mfm_read-00C0"
    BBIOC="mfm_r_revc.bbio"
 fi
-   
+
 if [ "$KERNEL_VER" -lt "4" ]; then
    # Use legacy cape manager loading functionality
    if [ -e /sys/devices/platform/bone_capemgr/slots ]
@@ -41,8 +46,17 @@ if [ ! -d /sys/class/gpio/gpio$pin ]; then
    wait_writeable "$pin"
 fi
 echo in > /sys/class/gpio/gpio$pin/direction
+sleep .05
 REV=$(cat /sys/class/gpio/gpio$pin/value)
 
+# For all revisions microstepper control
+	# // J7-3 EN		All models (gpio2[01]:65:P8_18)
+	# // J7-7 STBY		All models (gpio2[04]:68:P8_10)
+	# // J7-6 MODE0		All models (gpio2[23]:87:P8_29)
+	# // J7-11 MODE1	All models (gpio2[03]:67:P8_08)
+	# // J7-4 MODE2		All models (gpio2[22]:86:P8_27)
+	# // J7-9 MODE3		All models (gpio2[02]:66:P8_07)
+	# // J7-5 ERR		All models (gpio2[05]:69:P8_09)
 if [ "$REV" == "0" ]; then
    echo Rev C or D Board
    if [ "$KERNEL_VER" -lt "4" ]; then
@@ -51,16 +65,17 @@ if [ "$REV" == "0" ]; then
       echo ${DTBOC/-/:} > $CAPE
    else
       # Batch configure all pins for mfm_rw
-      # Shouldn't need sudo but sometimes get 
+      # Shouldn't need sudo but sometimes get
       # ERROR: open() for /sys/devices/platform/ocp/ocp:P9_13_pinmux/state failed, Permission denied
       sudo config-pin -c $dir/$BBIOC
    fi
    # Set inactive 31 recovery 46,15,26,27 Drive select, 110 write
    # 50 read transceiver enable, low enabled
-   # 8-11 rev B head, all low is head 0 after inversion
-   pins_low="8 9 10 11 31 46 15 26 27 110 50"
-   # 113 TRACK 0
-   pins_in="113"
+   # 8-11 rev B,C head, all low is head 0 after inversion
+   # 65-68, 86, 87 stepper control
+   pins_low="8 9 10 11 31 46 15 26 27 110 50 67 66 68 87 65 86"
+   # 113 TRACK 0, 69 ERR
+   pins_in="113 69"
    # 44 emu second driver emulation, disable
    # 60 MFM emulation tranceiver enable, high is disabled
    # 14,30(C) drive selected LEDS
@@ -72,9 +87,9 @@ else
       cp $dir/$DTBOAB.dtbo /lib/firmware
       echo ${DTBOAB/-/:} > $CAPE
    else
-      # Shouldn't need sudo but sometimes get 
+      # Shouldn't need sudo but sometimes get
       # ERROR: open() for /sys/devices/platform/ocp/ocp:P9_13_pinmux/state failed, Permission denied
-      sudo config-pin -c $dir/$BBIOAB 
+      sudo config-pin -c $dir/$BBIOAB
    fi
    # Detect A/B PIN with P8_16
    pin='46'
@@ -84,6 +99,7 @@ else
       wait_writeable "$pin"
    fi
    echo in > /sys/class/gpio/gpio$pin/direction
+   sleep .05
    REV=$(cat /sys/class/gpio/gpio$pin/value)
    if [ "$REV" == "0" ]; then
       echo Rev B Board
@@ -93,13 +109,14 @@ else
    # Set inactive 22,23,26,27 Drive select, 31 recovery, 110 write
    # 50 read transceiver enable, low enabled
    # 2-5 rev A head, 8-11 rev B head, all low is head 0 after inversion
-   pins_low="2 3 4 5 8 9 10 11 22 23 26 27 31 110 50"
+   # 65-68, 86, 87 stepper control
+   pins_low="2 3 4 5 8 9 10 11 22 23 26 27 31 110 50 67 66 68 87 65 86"
    # 14,15 drive selected LEDS
    # 44 emu second driver emulation, disable
    # 60 MFM emulation tranceiver enable, high is disabled
    pins_high="14 15 44 60"
-   # 30 TRACK 0
-   pins_in="30"
+   # 30 TRACK 0, 69 ERR
+   pins_in="30 69"
 fi
 
 # With universal cape header, all pins are exported and set to in by default.
