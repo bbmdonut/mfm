@@ -3,13 +3,13 @@
 // board_initialize sets up this module.
 // board_get_revision returns the revision of the MFM emulator board
 //
-// 09/17/2023 DJG Moved set_restore_max_cpu_speed to this file as board_
+// 09/17/23 DJG Moved set_restore_max_cpu_speed to this file as board_
 //   to only have one copy
-// 03/22/2019 DJG Added REV C support
-// 02/08/2017 DJG Fix incorrect format for print
-// 10/16/2016 DJG Improved error message
-// 12/24/2015 DJG Fix wrong value in error print
-// 08/01/2015 DJG New module to support revision B board.
+// 03/22/19 DJG Added REV C support
+// 02/08/17 DJG Fix incorrect format for print
+// 10/16/16 DJG Improved error message
+// 12/24/15 DJG Fix wrong value in error print
+// 08/01/15 DJG New module to support revision B board.
 //
 // Copyright 2019 David Gesswein.
 // This file is part of MFM disk utilities.

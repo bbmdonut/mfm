@@ -7,8 +7,15 @@
 //  Created on: Mar 31, 2025
 //      Author: BBMD (contains original code from DJG)
 //
-// 03/31/25 BBMD Added in order to export common functions for both MFM
+// 01/12/26 BBMD Added in order to export common functions for both MFM
 //    and RLL operations, to minimize duplication of code
+// 09/10/25 DJG Fixed ext2emu marking bad sectors when interleave used
+// 06/12/25 DJG/DV Add CONTROLLER_MICROBEE_WD1002_05
+// 06/04/25 DJG Changed trk_Xebec_* to use 5 ID mark patterns to match image
+//    mindset_st225_base.emu.
+//    https://bitsavers.org/pdf/xebec/Xebec_S1410/104478B_S1410A_Feb84.pdf
+//    says ID pattern is 4 bytes not normal 1. Also adjusted timing midway
+//    between two sample disk images.
 //
 // This file is part of MFM disk utilities.
 //
@@ -120,14 +127,7 @@ typedef struct {
    int emu_data_truncated;
 } STATS;
 
-typedef struct {
-      // Address of bad sector
-   int cyl;
-   int head;
-   int sector;
-      // Non zero if last entry in list
-   int last;
-} MARK_BAD_INFO;
+typedef char MARK_BAD_INFO[MAX_CYL][MAX_HEAD][MAX_SECTORS];
 
 typedef struct alt_struct ALT_INFO;
 struct alt_struct {
@@ -193,6 +193,7 @@ typedef struct {
       CONTROLLER_ISBC_214_256B,
       CONTROLLER_ISBC_214_512B,
       CONTROLLER_ISBC_214_1024B,
+      CONTROLLER_MICROBEE_WD1002_05,
       CONTROLLER_TEKTRONIX_6130,
       CONTROLLER_NIXDORF_8870,
       CONTROLLER_TANDY_8MEG,
@@ -340,8 +341,6 @@ typedef struct {
    int dont_change_start_time;
    // List of sector to mark bad in ext2emu. Sorted ascending
    MARK_BAD_INFO *mark_bad_list;
-   // Index for next entry in array above
-   int next_mark_bad;
    // Linked list of alternate tracks for fixing extracted data file
    ALT_INFO *alt_llist;
    // Cylinder to start write precompensation at. For mfm_write
@@ -692,6 +691,16 @@ DEF_EXTERN CONTROLLER controller_info[]
          {0xffff,0x1021,16,0},{0xffffffff,0x140a0445,32,6}, CONT_MODEL,
          0, 0, 0, 0, 0
       },
+      // DV Microbee format (Intel_iSBC_214_512B with start_sector 1)
+      {"Microbee_WD1002_05",      128, 10000000,      0,
+         4, ARRAYSIZE(mfm_all_poly), 4, ARRAYSIZE(mfm_all_poly),
+         0, ARRAYSIZE(mfm_all_init), CINFO_CHS,
+         5, 2, 0, 0, CHECK_CRC, CHECK_CRC,
+         0, 1, trk_ISBC214_512B, 512, 17, 1, 5209,
+         0, 0,
+         {0xffff,0x1021,16,0},{0xffffffff,0x140a0445,32,6}, CONT_MODEL,
+         0, 0, 0, 0
+      },      
       // TODO: Analyze currently can't separate this from Intel_iSBC_214_512B
       // since only different for heads >= 8
       {"Tektronix_6130",      128, 10000000,      0,

@@ -23,7 +23,7 @@
 //
 // Time is in 200 MHz clocks
 //
-// 08/06/25 BBMD Added to main code base, to support external stepper control
+// 01/12/26 BBMD Added to main code base, to support external stepper control
 // 09/08/21 DJG Fixed shared SRAM address. Shared SRAM not currently used.
 // 03/22/19 DJG Added REV C support
 // 02/17/19 DJG Capture sligtly past index to try to capture all data when

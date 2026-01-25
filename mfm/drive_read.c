@@ -7,13 +7,13 @@
 // The drive must be at track 0 on startup or drive_seek_track0 called.
 //
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.
-// 06/02/2023 DJG Fixed write fault error reading NEC drive
-// 07/05/2019 DJG Added support for using recovery signal
-// 03/09/2018 DJG Added logic to not retry when requested to read more
+// 06/02/23 DJG Fixed write fault error reading NEC drive
+// 07/05/19 DJG Added support for using recovery signal
+// 03/09/18 DJG Added logic to not retry when requested to read more
 //   cylinders or heads than analyze determined
-// 11/05/2016 DJG Made retry seek progression more like it was before change below
-// 10/16/2016 DJG Added control over seek on retry
-// 10/02/2016 DJG Rob Jarratt change to clean up confusing code.
+// 11/05/16 DJG Made retry seek progression more like it was before change below
+// 10/16/16 DJG Added control over seek on retry
+// 10/02/16 DJG Rob Jarratt change to clean up confusing code.
 //
 // Copyright 2023 David Gesswein.
 // This file is part of MFM disk utilities.

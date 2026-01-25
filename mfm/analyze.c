@@ -9,7 +9,7 @@
 // Copyright 2021 David Gesswein.
 // This file is part of MFM disk utilities.
 //
-// 03/31/25 BBMD Add RLL support for identification/analysis
+// 01/12/26 BBMD Add RLL support for identification/analysis
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.
 // 10/30/24 DJG Add new option to handle Xebec data skewed one sector from
 //    header

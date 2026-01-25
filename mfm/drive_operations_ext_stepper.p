@@ -1,6 +1,6 @@
 // Common code for talking to drives. Included by other .p files
 //
-// 08/06/25 BBMD Added to main code base, to support external stepper control
+// 01/12/26 BBMD Added to main code base, to support external stepper control
 //   for data recovery using microstepping
 // 03/22/19 DJG Added REV C support
 // 08/05/18 DJG Further increased seek complete timeout for Quantum Q2040 drive recal

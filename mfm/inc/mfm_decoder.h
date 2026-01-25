@@ -7,7 +7,7 @@
 //  Created on: Aug 30, 2015
 //      Author: DJG
 //
-// 03/31/25 BBMD Refactored common bits for MFM/RLL out into separate source
+// 01/12/26 BBMD Refactored common bits for MFM/RLL out into separate source
 //    files, updated remaining items to support refactoring as needed
 // 03/13/25 DJG Added ext2emu support for Xebec_104527_512B
 // 01/20/25 SH  Add ext2emu support for corvus_omni

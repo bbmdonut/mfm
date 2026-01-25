@@ -7,7 +7,7 @@
 //  Created on: Mar 31, 2025
 //      Author: BBMD (Based on code from DJG, others)
 //
-// 03/31/25 BBMD Initial implementation of common RLL decoding functionality,
+// 01/12/26 BBMD Initial implementation of common RLL decoding functionality,
 //    based in part on DJG and others' original MFM code
 //
 // This file is part of MFM disk utilities.

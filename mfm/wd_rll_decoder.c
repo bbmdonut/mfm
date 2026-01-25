@@ -19,7 +19,7 @@
 //      0011                       00001000
 //      0010                       00100100
 
-// 03/31/25 BBMD Add initial RLL decoding process
+// 01/12/26 BBMD Add initial RLL decoding process
 
 // Copyright 2022 David Gesswein.
 // This file is part of MFM disk utilities.

@@ -7,7 +7,7 @@
 //  Created on: Dec 23, 2013
 //      Author: DJG
 //
-// 08/06/2025 BBMD Added support functions for external stepper control,
+// 01/12/26 BBMD Added support functions for external stepper control,
 //    brought in from the customized build by DJG
 //
 // This file is part of MFM disk utilities.

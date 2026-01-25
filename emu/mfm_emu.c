@@ -25,21 +25,21 @@
 // 09/17/23 Changed to calling pru_exec_program to set correct path for file 
 //    to load and board_set_restore_max_cpu_speed to have one copy
 // 09/12/23 JST Changes to support 5.10 kernel and --sync option
-// 05/17/2021 DJG Removed --fill and added optional argument after --initialize
+// 05/17/21 DJG Removed --fill and added optional argument after --initialize
 //    for Cromemco
-// 05/13/2021 DJG Improved messages. Add --fill to set value used to fill
+// 05/13/21 DJG Improved messages. Add --fill to set value used to fill
 //    emulator data for --initialize. Cromemco can't format disk with default,
 //    0 works.
-// 04/09/2021 DJG Fix printing drive select for REV C boards.
-// 03/07/2021 DJG Fix buffer size calculation. Few words at end of track
+// 04/09/21 DJG Fix printing drive select for REV C boards.
+// 03/07/21 DJG Fix buffer size calculation. Few words at end of track
 //    could be overwritten with buffer overflow.
-// 01/24/2021 DJG Make stdout nonblocking to prevent prints from blocking
+// 01/24/21 DJG Make stdout nonblocking to prevent prints from blocking
 //    emulation. Initialize data to send when invalid head selected.
-// 06/19/2020 DJG Change PWM word format to speed up pru code
-// 04/15/2019 DJG Added support for RPM set on command line
-// 04/14/2019 DJG Added print
-// 03/22/2019 DJG Added REV C support
-// 03/09/2018 DJG Make sure correct setup script run so pins are in correct
+// 06/19/20 DJG Change PWM word format to speed up pru code
+// 04/15/19 DJG Added support for RPM set on command line
+// 04/14/19 DJG Added print
+// 03/22/19 DJG Added REV C support
+// 03/09/18 DJG Make sure correct setup script run so pins are in correct
 //    direction.
 // 05/19/17 DJG Dummped more memory on error.
 // 02/20/16 DJG Reduced amount of delay when writing multiple tracks with

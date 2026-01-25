@@ -1,7 +1,15 @@
 // This is a utility program to process existing MFM delta transition data.
 // Used to extract the sector contents to a file
 //
-// 03/31/25 BBMD Added support for RLL handling
+// 01/12/26 BBMD Added support for RLL handling
+// 09/10/25 DJG Fixed ext2emu marking bad sectors when interleave used
+// 06/12/25 DJG Added missing break
+// 06/06/25 DJG C compiler on Beaglebone didn't like syntax. Newer GCC
+//    on development machine was ok with it.
+// 06/04/25 DJG Added FIELD_XEBEC_ID to insert  5 ID mark patterns to match
+//    image mindset_st225_base.emu.
+//    https://bitsavers.org/pdf/xebec/Xebec_S1410/104478B_S1410A_Feb84.pdf
+//    says ID pattern is 4 bytes not normal 1.
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.
 // 10/30/24 DJG Add new option to handle Xebec data skewed one sector from
 //    header
@@ -41,7 +49,7 @@
 // 10/24/14 DJG Changes necessary due to addition of mfm_emu write buffer
 //     using decode options stored in header, and minor reformatting
 //
-// Copyright 2021 David Gesswein.
+// Copyright 2025 David Gesswein.
 // This file is part of MFM disk utilities.
 //
 // MFM disk utilities is free software: you can redistribute it and/or modify
@@ -692,16 +700,10 @@ static void process_field(DRIVE_PARAMS *drive_params,
                &drive_params->data_crc,
                controller_info[drive_params->controller].data_check);
             if (drive_params->mark_bad_list != NULL) {
-               MARK_BAD_INFO *mark_bad_list =
-                    &drive_params->mark_bad_list[drive_params->next_mark_bad];
-               if (get_cyl() == mark_bad_list->cyl &&
-                    get_head() == mark_bad_list->head &&
-                    get_sector(drive_params) == mark_bad_list->sector) {
+               if ((*drive_params->mark_bad_list)[get_cyl()][get_head()]
+                    [get_sector(drive_params)]) {
                   // Invert the check value to invalidiate
                   value = ~value;
-                  if (!mark_bad_list->last) {
-                     drive_params->next_mark_bad++;
-                  }
                }
             }
          break;
@@ -769,6 +771,27 @@ static void process_field(DRIVE_PARAMS *drive_params,
                 field_def[ndx].byte_offset_bit_len;
             special_list[(*special_list_ndx)++].pattern = 0x4489;
             value = 0xa1;
+         break;
+         case FIELD_XEBEC_ID:
+         {
+            // previous data is 10. This adds repeating 7 bit pattern 0001001
+            // Will only work if
+            int xebec_id[] = {0x2448, 0x9122, 0x4489, 0x1224, 0x4aaa};
+            if (field_def[ndx].len_bytes != ARRAYSIZE(xebec_id)) {
+               msg(MSG_FATAL, "XEBEC id length wrong\n");
+               exit(1);
+            }
+            for (i = 0; i < field_def[ndx].len_bytes; i++) {
+               if (*special_list_ndx >= special_list_len) {
+                  msg(MSG_FATAL, "Special list overflow\n");
+                  exit(1);
+               }
+               special_list[*special_list_ndx].index = start +
+                     field_def[ndx].byte_offset_bit_len + i;
+               special_list[(*special_list_ndx)++].pattern = xebec_id[i];
+            }
+            value = 0xa1;
+         }
          break;
             // Special 42 with missing clock. We put 42 in the data and fix the
             // encoded MFM data curing the conversion

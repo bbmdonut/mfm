@@ -15,25 +15,25 @@
 //
 // The drive must be at track 0 on startup or drive_seek_track0 called.
 //
-// 08/06/2025 BBMD Added a check for external stepper operation to prevent
+// 01/12/26 BBMD Added a check for external stepper operation to prevent
 //    calling drive_seek_track0, as track 0 detection doesn't always
 //    work correctly in these cases
-// 06/02/2023 DJG Fixed write fault error reading NEC drive
-// 07/05/2019 DJG Added support for using recovery signal
-// 03/22/2019 DJG Added REV C support
-// 09/01/2018 DJG Drive 0 is valid for drive_select(), don't drive
+// 06/02/23 DJG Fixed write fault error reading NEC drive
+// 07/05/19 DJG Added support for using recovery signal
+// 03/22/19 DJG Added REV C support
+// 09/01/18 DJG Drive 0 is valid for drive_select(), don't drive
 //    and select lines
-// 08/05/2018 DJG Drive 0 invalid for drive_select()
-// 05/06/2018 DJG Adjustement to try to make Syquest disks work better
-// 03/09/2018 DJG Make sure correct setup script run so pins are in correct
+// 08/05/18 DJG Drive 0 invalid for drive_select()
+// 05/06/18 DJG Adjustement to try to make Syquest disks work better
+// 03/09/18 DJG Make sure correct setup script run so pins are in correct
 //    direction.
-// 10/02/2016 DJG Rob Jarratt change for DEC RD drives to detect when
+// 10/02/16 DJG Rob Jarratt change for DEC RD drives to detect when
 //    it recalibrates back to track 0 when stepping past end
-// 02/20/2016 DJG Split for drive reading and writing
-// 01/06/2016 DJG Detect reversed J4 cable
-// 12/24/2015 DJG Fix comment
-// 07/30/2015 DJG Added support for revision B board.
-// 05/16/2015 DJG Changes for drive_file.c
+// 02/20/16 DJG Split for drive reading and writing
+// 01/06/16 DJG Detect reversed J4 cable
+// 12/24/15 DJG Fix comment
+// 07/30/15 DJG Added support for revision B board.
+// 05/16/15 DJG Changes for drive_file.c
 //
 // Copyright 2014-2023 David Gesswein.
 // This file is part of MFM disk utilities.

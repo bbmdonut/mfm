@@ -7,7 +7,7 @@
 //  Created on: Aug 6, 2025
 //      Author: BBMD (contains original code from DJG and others)
 //
-// 08/06/2025 BBMD Imported header to support external stepper control from
+// 01/12/26 BBMD Imported header to support external stepper control from
 //    DJG's alternate build
 //
 // This file is part of MFM disk utilities.

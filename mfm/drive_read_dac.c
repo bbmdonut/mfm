@@ -6,13 +6,13 @@
 //
 // The drive must be at track 0 on startup or drive_seek_track0 called.
 //
-// 08/06/25 BBMD Added to main code base, to support external stepper control
+// 01/12/26 BBMD Added to main code base, to support external stepper control
 //   for data recovery using microstepping
-// 03/09/2018 DJG Added logic to not retry when requested to read more
+// 03/09/18 DJG Added logic to not retry when requested to read more
 //   cylinders or heads than analyze determined
-// 11/05/2016 DJG Made retry seek progression more like it was before change below
-// 10/16/2016 DJG Added control over seek on retry
-// 10/02/2016 DJG Rob Jarratt change to clean up confusing code.
+// 11/05/16 DJG Made retry seek progression more like it was before change below
+// 10/16/16 DJG Added control over seek on retry
+// 10/02/16 DJG Rob Jarratt change to clean up confusing code.
 //
 // Copyright 2016 David Gesswein.
 // This file is part of MFM disk utilities.

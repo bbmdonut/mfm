@@ -4,7 +4,7 @@
 // for sectors with bad headers. See if resyncing PLL at write boundaries improves performance when
 // data bits are shifted at write boundaries.
 //
-// 03/31/25 BBMD Moved code common to both MFM and RLL operations out into
+// 01/12/26 BBMD Moved code common to both MFM and RLL operations out into
 //    decoder_common, and created this file for RLL-related decoding
 
 #include <stdio.h>

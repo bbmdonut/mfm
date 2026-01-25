@@ -97,17 +97,16 @@
 //    head if necessary.
 //
 // The drive must be at track 0 on startup or drive_seek_track0 called.
-//
-// 11/04/2025 BBMD Integrated changes to J7 pin assignments from DJG
-//   All revisions now use the same pinout
-//   Note that the ST-225/ST-238R stepper pinout was updated as well!
-// 08/06/2025 BBMD Initial import to main code branch to support
-//   microstepping recovery in newer builds/RLL formats
-// 03/09/2018 DJG Added logic to not retry when requested to read more
+// 01/12/26 BBMD Initial import to main code branch to support
+//   microstepping recovery in newer builds/RLL formats; also added changes
+//   made by DJG to wiring pinouts in order to make the stepper control
+//   wiring universal across revisions for the Sparkfun controller, along with
+//   a pinout correction for ST-225 and compatible stepper motors
+// 03/09/18 DJG Added logic to not retry when requested to read more
 //   cylinders or heads than analyze determined
-// 11/05/2016 DJG Made retry seek progression more like it was before change below
-// 10/16/2016 DJG Added control over seek on retry
-// 10/02/2016 DJG Rob Jarratt change to clean up confusing code.
+// 11/05/16 DJG Made retry seek progression more like it was before change below
+// 10/16/16 DJG Added control over seek on retry
+// 10/02/16 DJG Rob Jarratt change to clean up confusing code.
 //
 // Copyright 2021 David Gesswein.
 // This file is part of MFM disk utilities.
