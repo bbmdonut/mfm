@@ -776,6 +776,7 @@ step_restart:
       // Clear all the lines we use
    MOV      r4, GPIO_DRIVE_HEAD_LINES
    SBBO     r4, r1, 0, 4
+
    LBCO     CUR_DRIVE_SEL, CONST_PRURAM, PRU0_DRIVE0_SELECT, 4
    QBEQ     sel0_always, CUR_DRIVE_SEL, 0  // If zero always selected (radial select)
    QBBC     sel0, r31, CUR_DRIVE_SEL      // Branch if drive 0 selected
@@ -828,7 +829,8 @@ step_restart2:
    QBBC     selected0, r2, 0
 
      // Drive 1 selected
-   MOV      DRIVE_DATA, DRIVE_DATA_BYTES       // Offset of drive 1 data     // Cylinder of currently selected drive
+   MOV      DRIVE_DATA, DRIVE_DATA_BYTES       // Offset of drive 1 data
+     // Cylinder of currently selected drive
    LBBO     r3, DRIVE_DATA, PRU0_DRIVE0_CUR_CYL, 4
    QBEQ     track0a, r3, 0
    CLR      r30, R30_TRACK_0_BIT
@@ -837,7 +839,8 @@ track0a:
    SET      r30, R30_TRACK_0_BIT
 finish1:
    SET      r30, R30_SEEK_COMPLETE_BIT
-   SET      r30, R30_READY_BITSBBO     r0, r1, 0, 4
+   SET      r30, R30_READY_BIT
+   SBBO     r0, r1, 0, 4
    MOV      r0, (1 << GPIO0_DRIVE1_LED)
    MOV      r1, GPIO0 | GPIO_CLEARDATAOUT
    SBBO     r0, r1, 0, 4
@@ -910,6 +913,7 @@ waitsel:
    QBBC     step_restart, r31, R31_SEL1_BIT
    QBBC     step_restart, r31, R31_SEL2_BIT
    JMP      waitsel
+
 
 handle_head:
       // Stop PRU 1. We will check stopped later

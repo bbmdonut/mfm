@@ -1,14 +1,15 @@
 #ifndef MFM_DECODER_H_
 #define MFM_DECODER_H_
 
-//
-// mfm_decoder.h
-//
-//  Created on: Aug 30, 2015
-//      Author: DJG
-//
 // 01/12/26 BBMD Refactored common bits for MFM/RLL out into separate source
 //    files, updated remaining items to support refactoring as needed
+// 09/10/25 DJG Fixed ext2emu marking bad sectors when interleave used
+// 06/12/25 DJG/DV Add CONTROLLER_MICROBEE_WD1002_05
+// 06/04/25 DJG Changed trk_Xebec_* to use 5 ID mark patterns to match image
+//    mindset_st225_base.emu. 
+//    https://bitsavers.org/pdf/xebec/Xebec_S1410/104478B_S1410A_Feb84.pdf
+//    says ID pattern is 4 bytes not normal 1. Also adjusted timing midway
+//    between two sample disk images.
 // 03/13/25 DJG Added ext2emu support for Xebec_104527_512B
 // 01/20/25 SH  Add ext2emu support for corvus_omni
 // 01/13/25 DJG Fixes for xebec_skew processing. Skew not same on all tracks.

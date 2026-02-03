@@ -401,7 +401,6 @@ fprintf(out,"$var wire 1 & sector $end\n");
             sync_count++;
             if ((raw_word & 0xffff) == 0xaa55 && sync_count > 20) {
                sync_count = 0;
-
 #if VCD
 bit_time = track_time / 198e6 * 1e12;
 fprintf(out,"#%lld\n1&\n", bit_time);
