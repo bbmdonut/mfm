@@ -1,6 +1,7 @@
 #ifndef MFM_DECODER_H_
 #define MFM_DECODER_H_
-
+//
+// 05/15/26 DJG Added SHUGART_CD9963 & HP9133XV controller
 // 01/12/26 BBMD Refactored common bits for MFM/RLL out into separate source
 //    files, updated remaining items to support refactoring as needed
 // 09/10/25 DJG Fixed ext2emu marking bad sectors when interleave used

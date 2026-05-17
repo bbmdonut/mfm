@@ -45,7 +45,7 @@
 #define ARRAYSIZE(x) (sizeof(x) / sizeof(x[0]))
 
 // 0 = first/A, 1 = B, 2 = C or D. Used to index arrays so can't change encoding
-static int board_revision = -1;
+static int board_revision = -1; 
 
 // Perform any setup needed by this module. Call once before any other
 // routine

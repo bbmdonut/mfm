@@ -1808,6 +1808,57 @@ void mfm_handle_alt_LBA(DRIVE_PARAMS *drive_params, unsigned int bad_LBA,
    }
 }
 
+// This adds to alternate track link list the data that needs to be
+// swapped to put the good data in the proper location in the extracted
+// data file for replacing a sector in LBA format.
+//
+// drive_params: Drive parameters
+// bad_lba: LBA that has alterinate track assigned for
+// good_lba: The alternate LBA assigned
+void mfm_handle_alt_LBA(DRIVE_PARAMS *drive_params, unsigned int bad_LBA, 
+     int good_LBA, int size, int print) {
+   ALT_INFO *alt_info;
+
+   // Don't perform alt track processing if analyzing.
+   if (drive_params->analyze_in_progress) {
+      return;
+   }
+   int disk_size = drive_params->num_cyl * drive_params->num_head * 
+         drive_params->num_sectors;
+   if (bad_LBA >= disk_size || bad_LBA < 0) {
+      msg(MSG_ERR, "Bad alternate LBA %d out of valid range 0 to %d\n",
+         bad_LBA, disk_size);
+      return;
+   }
+   if (good_LBA >= disk_size || good_LBA < 0) {
+      msg(MSG_ERR, "Bad good LBA %d out of valid range 0 to %d\n",
+         good_LBA, disk_size);
+      return;
+   }
+   alt_info = msg_malloc(sizeof(ALT_INFO), "Alt info");
+
+   memset(alt_info, 0, sizeof(ALT_INFO));
+   alt_info->bad_offset = bad_LBA * drive_params->sector_size;
+   alt_info->good_offset = good_LBA * drive_params->sector_size;
+   alt_info->length = size;
+
+   alt_info->next = drive_params->alt_llist; 
+      // Alternate is reported with same information for each
+      // sector. Only add one copy
+   if (drive_params->alt_llist == NULL || 
+         alt_info->bad_offset != drive_params->alt_llist->bad_offset ||
+         alt_info->good_offset != drive_params->alt_llist->good_offset) {
+      drive_params->alt_llist = alt_info;
+
+      if (print) {
+         msg(MSG_INFO,"Alternate track assigned to LBA %d for LBA %d. Extract data fixed\n",
+           good_LBA, bad_LBA);
+      }
+   } else {
+      free(alt_info);
+   }
+}
+
 // Indexed by from sector. Value is to sector
 int remap_list[MAX_SECTORS];
 

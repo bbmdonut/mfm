@@ -1098,7 +1098,7 @@ void ext2emu(int argc, char *argv[])
       // Store byte locations in track where special MFM encoding of A1
       // mark field needs to be inserted
    // Xebec needs *5 for FIELD_XEBEC_ID
-   SPECIAL_LIST special_list[MAX_SECTORS*5];      
+   SPECIAL_LIST special_list[MAX_SECTORS*5];
    int special_list_ndx = 0;
       // Number of bytes written to track
    int track_filled = 0;
