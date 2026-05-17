@@ -7,6 +7,7 @@
 //  Created on: Mar 31, 2025
 //      Author: BBMD (contains original code from DJG)
 //
+// 05/15/26 DJG Added SHUGART_CD9963 & HP9133XV controller
 // 01/12/26 BBMD Added in order to export common functions for both MFM
 //    and RLL operations, to minimize duplication of code
 // 09/10/25 DJG Fixed ext2emu marking bad sectors when interleave used
@@ -226,6 +227,8 @@ typedef struct {
       CONTROLLER_NEC_4800,
       CONTROLLER_SOUYZ_NEON,
       CONTROLLER_INFORT_PC02_06,
+      CONTROLLER_HP9133XV,
+      CONTROLLER_SHUGART_CD9963,      
       CONTROLLER_SM_1810_512B,
       CONTROLLER_DSD_5217_512B,
       CONTROLLER_OMTI_5510,
@@ -359,6 +362,21 @@ typedef struct {
    int xebec_skew;
    // Value set on command line
    int xebec_skew_cmdline;
+   // Extra data needed. Data in this structure is big endian
+   union {
+      struct s_CD9963_sect0 {
+         uint16_t sectSize;
+         uint8_t  nHeads;
+         uint8_t  nSect;
+         uint16_t nCyl;
+         uint16_t unknown1[5];
+         uint16_t SCSInCyl;
+         uint16_t unknown2;
+         uint8_t  nZones1;
+         uint8_t  nZones2;
+         uint16_t zones[245];  // Only 15 used in sample
+      } CD9963_sect0;
+   } u;   
    // If zero, we are dealing with MFM encoding. Otherwise, it's RLL.
    int is_rll;
    // Used by the microstepping code for external stepper control
@@ -991,6 +1009,24 @@ DEF_EXTERN CONTROLLER controller_info[]
          0, 0,
          {0xffff,0x1021,16,0},{0x0,0x140a0445,32,6}, CONT_MODEL,
          0, 0, 0, 0, 0
+      },
+      {"HP9133XV",              256, 10000000,      0, 
+         4, ARRAYSIZE(mfm_all_poly), 4, ARRAYSIZE(mfm_all_poly), 
+         0, ARRAYSIZE(mfm_all_init), CINFO_CHS,
+         5, 2, 0, 0, CHECK_CRC, CHECK_CRC,
+         0, 1, trk_HP9133XV, 256, 31, 0, 5209,
+         0, 0,
+         {0xffff,0x1021,16,0},{0xffff,0x1021,16,0}, CONT_MODEL,
+         0, 0, 0, 0
+      },
+      {"SHUGART_CD9963",          512, 10000000,      0, 
+         4, ARRAYSIZE(mfm_all_poly), 4, ARRAYSIZE(mfm_all_poly), 
+         0, ARRAYSIZE(mfm_all_init), CINFO_CHS,
+         6, 2, 0, 0, CHECK_CRC, CHECK_CRC,
+         0, 1, trk_shugart_1610, 512, 17, 0, 5209,
+         512, 0,
+         {0xffff,0x1021,16,0},{0xffffffff,0x10183031,32,6}, CONT_MODEL,
+         0, 0, 0, 0
       },
       // OMTI_5200 uses initial value 0x409e10aa for data
       // Data CRC is really initial value 0 xor of final value of 0xffffffff.

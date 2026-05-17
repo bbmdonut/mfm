@@ -76,7 +76,7 @@
 //    match format
 // 07/19/19 DJG Added ext2emu support for Xerox 8010. Fixed data for
 //    trk_omti_5510
-// 06/19/19 DJG Removed DTC_256B since only difference from DEC_520_256B was
+// 06/19/19 DJG Removed DTC_256B since only difference from DTC_520_256B was
 //    error. Added SM1040 format. Fixed Xerox_8010 bitrate. Added recovery
 //    mode flag
 // 02/09/19 DJG Added CONTROLLER_SAGA_FOX, adjusted trk_ISBC215_1024b to match
@@ -260,6 +260,8 @@ int mfm_get_data_bit_count();
 
 void mfm_handle_alt_track_ch(DRIVE_PARAMS *drive_params, unsigned int bad_cyl,
       unsigned int bad_head, unsigned int good_cyl, unsigned int good_head);
+void mfm_handle_alt_LBA(DRIVE_PARAMS *drive_params, unsigned int bad_LBA,
+     int good_LBA, int size, int print);
 int mfm_fix_head(DRIVE_PARAMS *drive_params, int exp_head, int head);
 
 void mfm_end_track(DRIVE_PARAMS *drive_params,

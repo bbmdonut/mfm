@@ -7,6 +7,7 @@
 //  Created on: Mar 31, 2025
 //      Author: BBMD (Based on code from DJG, others)
 //
+// 05/15/26 DJG Added SHUGART_CD9963 & HP9133XV controller
 // 01/12/26 BBMD Moved the definitions for track layouts into a common header,
 //    in order to add RLL formats when ready
 // 06/12/25 DJG/DV Add CONTROLLER_MICROBEE_WD1002_05
@@ -322,6 +323,99 @@ DEF_EXTERN TRK_L trk_ISBC214_128b[]
      }
    },
    {251, TRK_FILL, 0x4e, NULL},
+   {-1, 0, 0, NULL},
+}
+#endif
+;
+
+DEF_EXTERN TRK_L trk_HP9133XV[] 
+#ifdef DEF_DATA
+ = 
+{ { 15, TRK_FILL, 0x4e, NULL },
+  { 31, TRK_SUB, 0x00, 
+     (TRK_L []) 
+     {
+        {14, TRK_FILL, 0x00, NULL},
+        {7, TRK_FIELD, 0x00, 
+           (FIELD_L []) {
+              {1, FIELD_A1, 0xa1, OP_SET, 0, NULL},
+              {1, FIELD_FILL, 0xfe, OP_SET, 1, NULL},
+              // This adds upper 3 bits of cylinder to bits 3,1,0 of
+              // the 0xfe byte and the rest in the next byte. The cylinder
+              // bits are xored with the 0xfe. Xor with 0 just sets the bits
+              {0, FIELD_CYL, 0x00, OP_XOR, 11, 
+                 (BIT_L []) {
+                    { 12, 1},
+                    { 14, 10},
+                    { -1, -1},
+                 }
+              },
+              // Sector size 256
+              {1, FIELD_FILL, 0x00, OP_SET, 3, NULL},
+              // Add head to lower bits
+              {1, FIELD_HEAD, 0x00, OP_XOR, 3, NULL},
+              // Don't support alternate tracks
+              {1, FIELD_SECTOR, 0x00, OP_SET, 4, NULL},
+              {2, FIELD_HDR_CRC, 0x00, OP_SET, 5, NULL},
+              {-1, 0, 0, 0, 0, NULL}
+           }
+        },
+        {16, TRK_FILL, 0x00, NULL},
+        {260, TRK_FIELD, 0x00, 
+           (FIELD_L []) {
+              {1, FIELD_A1, 0xa1, OP_SET, 0, NULL},
+              {1, FIELD_FILL, 0xf8, OP_SET, 1, NULL},
+              {256, FIELD_SECTOR_DATA, 0x00, OP_SET, 2, NULL},
+              {2, FIELD_DATA_CRC, 0x00, OP_SET, 258, NULL},
+              {0, FIELD_NEXT_SECTOR, 0x00, OP_SET, 0, NULL},
+              {-1, 0, 0, 0, 0, NULL}
+           }
+        },
+        {3, TRK_FILL, 0x00, NULL},
+        {18, TRK_FILL, 0x4e, NULL},
+        {-1, 0, 0, NULL},
+     }
+   },
+   {14, TRK_FILL, 0x00, NULL},
+   {7, TRK_FIELD, 0x00, 
+      (FIELD_L []) {
+         {1, FIELD_A1, 0xa1, OP_SET, 0, NULL},
+         {1, FIELD_FILL, 0xfe, OP_SET, 1, NULL},
+         // This adds upper 3 bits of cylinder to bits 3,1,0 of
+         // the 0xfe byte and the rest in the next byte. The cylinder
+         // bits are xored with the 0xfe. Xor with 0 just sets the bits
+         {0, FIELD_CYL, 0x00, OP_XOR, 11, 
+            (BIT_L []) {
+               { 12, 1},
+               { 14, 10},
+               { -1, -1},
+            }
+         },
+         // Sector size 256
+         {1, FIELD_FILL, 0x00, OP_SET, 3, NULL},
+         // Add head to lower bits
+         {1, FIELD_HEAD, 0x00, OP_XOR, 3, NULL},
+         // Not sure what the last sector 255 is for
+         {1, FIELD_FILL, 0xff, OP_SET, 4, NULL},
+         {2, FIELD_HDR_CRC, 0x00, OP_SET, 5, NULL},
+         {-1, 0, 0, 0, 0, NULL}
+      }
+   },
+   {16, TRK_FILL, 0x00, NULL},
+   {260, TRK_FIELD, 0x00, 
+      (FIELD_L []) {
+         {1, FIELD_A1, 0xa1, OP_SET, 0, NULL},
+         {1, FIELD_FILL, 0xf8, OP_SET, 1, NULL},
+         // Just fill with 0xff
+         {256, FIELD_FILL, 0xff, OP_SET, 2, NULL},
+         {2, FIELD_DATA_CRC, 0x00, OP_SET, 258, NULL},
+         {0, FIELD_NEXT_SECTOR, 0x00, OP_SET, 0, NULL},
+         {-1, 0, 0, 0, 0, NULL}
+      }
+   },
+   {3, TRK_FILL, 0x00, NULL},
+   {18, TRK_FILL, 0x4e, NULL},
+   {227, TRK_FILL, 0x4e, NULL},
    {-1, 0, 0, NULL},
 }
 #endif

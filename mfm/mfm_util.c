@@ -1,6 +1,7 @@
 // This is a utility program to process existing MFM delta transition data.
 // Used to extract the sector contents to a file
 //
+// 05/15/26 DJG Fixed Xebec special list overflow
 // 01/12/26 BBMD Added support for RLL handling
 // 09/10/25 DJG Fixed ext2emu marking bad sectors when interleave used
 // 06/12/25 DJG Added missing break
@@ -555,7 +556,7 @@ static void get_metadata(DRIVE_PARAMS *drive_params, uint8_t track[], int length
    int rc;
 
    if (drive_params->metadata_bytes > length) {
-      msg(MSG_FATAL, "Track overflow get_data\n");
+      msg(MSG_FATAL, "Track overflow get_metadata\n");
       exit(1);
    }
    block = (get_cyl() * drive_params->num_head + get_head()) *
@@ -774,8 +775,7 @@ static void process_field(DRIVE_PARAMS *drive_params,
          break;
          case FIELD_XEBEC_ID:
          {
-            // previous data is 10. This adds repeating 7 bit pattern 0001001
-            // Will only work if
+            // This adds repeating 7 bit pattern 0001001
             int xebec_id[] = {0x2448, 0x9122, 0x4489, 0x1224, 0x4aaa};
             if (field_def[ndx].len_bytes != ARRAYSIZE(xebec_id)) {
                msg(MSG_FATAL, "XEBEC id length wrong\n");
@@ -841,7 +841,7 @@ static void process_field(DRIVE_PARAMS *drive_params,
             special_list[(*special_list_ndx)++].pattern = 0x89aa;
             value = 0x10;
          break;
-            // Special E3 with missing clock. We put E3 in the data and fix the
+            // Special C0 with missing clock. We put C0 in the data and fix the
             // encoded MFM data curing the conversion.
          case FIELD_C0:
             if (*special_list_ndx >= special_list_len) {
@@ -1097,7 +1097,8 @@ void ext2emu(int argc, char *argv[])
    uint32_t *track_mfm;
       // Store byte locations in track where special MFM encoding of A1
       // mark field needs to be inserted
-   SPECIAL_LIST special_list[MAX_SECTORS*2];
+   // Xebec needs *5 for FIELD_XEBEC_ID
+   SPECIAL_LIST special_list[MAX_SECTORS*5];      
    int special_list_ndx = 0;
       // Number of bytes written to track
    int track_filled = 0;
