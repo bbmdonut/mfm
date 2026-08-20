@@ -35,9 +35,6 @@
 #define DEF_EXTERN
 #endif
 
-void rll_check_header_values(int exp_cyl, int exp_head, int *sector_index,
-   int sector_size, int *seek_difference, SECTOR_STATUS *sector_status,
-   DRIVE_PARAMS *drive_params, SECTOR_STATUS sector_status_list[]);
 SECTOR_DECODE_STATUS wd_process_rll_data(STATE_TYPE *state, uint8_t bytes[],
       int total_bytes,
       uint64_t crc, int exp_cyl, int exp_head, int *sector_index,
@@ -53,9 +50,6 @@ SECTOR_DECODE_STATUS wd_decode_rll_track(DRIVE_PARAMS *drive_parms, int cyl,
 extern void update_emu_track_words(DRIVE_PARAMS * drive_params,
       SECTOR_STATUS sector_status_list[], int write_track, int new_track,
       int cyl, int head);
-SECTOR_DECODE_STATUS rll_crc_bytes(DRIVE_PARAMS *drive_params, uint8_t bytes[],
-    int bytes_crc_len, int state, uint64_t *crc_ret, int *ecc_span,
-    SECTOR_DECODE_STATUS *init_status, int perform_ecc);
 SECTOR_DECODE_STATUS rll_process_bytes(DRIVE_PARAMS *drive_params, uint8_t bytes[],
       int bytes_crc_len, int total_bytes, STATE_TYPE *state, int cyl,
       int head, int *sector_index,

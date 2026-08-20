@@ -206,25 +206,25 @@ void find_init(uint64_t poly, int sector)
       allones_init = ~allones_init >> (64 - crc_info.length);
 
       for (i = data_bytes-1; i >= 0; i--) {
-	 crc = crc64rb(buf[sector + i], crc, &crc_info);
-	 if (crc == 0 || crc == allones_init) {
-	    cout << "initial value " << hex << setw(crc_chars) << crc << " ignoring first " << dec << i << " bytes\n";
-	    init = crc;
-	    break;
-	 }
-	 if (i == 0) {
-	    cout << "initial value " << hex << setw(crc_chars) << crc << endl;
-	    init = crc;
-	 }
+         crc = crc64rb(buf[sector + i], crc, &crc_info);
+         if (crc == 0 || crc == allones_init) {
+            cout << "initial value " << hex << setw(crc_chars) << crc << " ignoring first " << dec << i << " bytes\n";
+            init = crc;
+            break;
+         }
+         if (i == 0) {
+            cout << "initial value " << hex << setw(crc_chars) << crc << endl;
+            init = crc;
+         }
       }
 
       cout << "First 4 bytes " << hex << setfill('0') << setw(2) <<
          +buf[sector] << setw(2) << +buf[sector+1] << setw(2) <<  +buf[sector+2] << setw(2) << +buf[sector+3] << endl;
       crc = 0;
       for (i = sect_bytes-1; i >= 0; i--) {
-	 crc = crc64r(buf[sector + i], crc, &crc_info);
-	 if (i <= 8) {
-	    cout << dec << i << " " << hex << setw(crc_chars) << +crc_revbits(crc, crc_info.length) << " " << setw(crc_chars) << +(crc_revbits(crc, crc_info.length) ^ init) << endl;
+         crc = crc64r(buf[sector + i], crc, &crc_info);
+         if (i <= 8) {
+            cout << dec << i << " " << hex << setw(crc_chars) << +crc_revbits(crc, crc_info.length) << " " << setw(crc_chars) << +(crc_revbits(crc, crc_info.length) ^ init) << endl;
          }
       }
    }

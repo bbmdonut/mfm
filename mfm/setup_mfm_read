@@ -50,13 +50,13 @@ sleep .05
 REV=$(cat /sys/class/gpio/gpio$pin/value)
 
 # For all revisions microstepper control
-	# // J7-3 EN		All models (gpio2[01]:65:P8_18)
-	# // J7-7 STBY		All models (gpio2[04]:68:P8_10)
-	# // J7-6 MODE0		All models (gpio2[23]:87:P8_29)
-	# // J7-11 MODE1	All models (gpio2[03]:67:P8_08)
-	# // J7-4 MODE2		All models (gpio2[22]:86:P8_27)
-	# // J7-9 MODE3		All models (gpio2[02]:66:P8_07)
-	# // J7-5 ERR		All models (gpio2[05]:69:P8_09)
+   # // J7-3 EN      All models (gpio2[01]:65:P8_18)
+   # // J7-7 STBY    All models (gpio2[04]:68:P8_10)
+   # // J7-6 MODE0   All models (gpio2[23]:87:P8_29)
+   # // J7-11 MODE1  All models (gpio2[03]:67:P8_08)
+   # // J7-4 MODE2   All models (gpio2[22]:86:P8_27)
+   # // J7-9 MODE3   All models (gpio2[02]:66:P8_07)
+   # // J7-5 ERR     All models (gpio2[05]:69:P8_09)
 if [ "$REV" == "0" ]; then
    echo Rev C or D Board
    if [ "$KERNEL_VER" -lt "4" ]; then

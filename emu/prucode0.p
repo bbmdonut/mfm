@@ -238,8 +238,8 @@
    MOV r1,r1
 .endm
 
-// These are registers that are used globally. Check registers defined in 
-// cmd.h if looking for free registers.
+      // These are registers that are used globally. Check registers defined in 
+      // cmd.h if looking for free registers.
 
    // PWM word from PRU 1 in various forms
 #define PWM_WORD     r5
@@ -274,7 +274,7 @@
    // Bit in GPIO or R31 for currently selected drive
 #define CUR_DRIVE_SEL r22
 #define DDR_ADDR     r23
-// r24 and r25 used by subroutines and not restored
+      // r24 and r25 used by subroutines and not restored
 
    // 100 nanoseconds, Settle time for head/select lines after change
 #define SETTLE_TIME 20
@@ -440,8 +440,8 @@ START:
    SBCO     r0, CONST_PRURAM, PRU0_CMD, 4
    SBCO     RZERO, CONST_PRURAM, PRU0_STATUS, 4
 
-// Wait for initial go from the ARM before we start acting like a drive
-// We need various data set up by it before we can start
+      // Wait for initial go from the ARM before we start acting like a drive
+      // We need various data set up by it before we can start
 wait_initial_cmd:
       // Keep our time cleared. Cycle counter stops if it overflows
    SBBO     RZERO, CYCLE_CNTR, 0, 4
@@ -475,7 +475,7 @@ no_drive1:
    LBCO      r3, CONST_PRURAM, PRU0_DRIVE1_NUM_HEAD, 4
    // Use maximum for the two drives. We don't support one drive using 
    // reduced write and the other not 
-   MAX       r1, r1, r3	
+   MAX       r1, r1, r3
    // If greater than 8 use all head select. Otherwise ignore MSB which
    // is reduced write current on earlier drives
    MOV       r3, 0
@@ -506,7 +506,7 @@ headok2:
    MOV       r1, GPIO0 | GPIO_IRQSTATUS_SET_0
    SBBO      r0, r1, 0, 4
 
-// Now start emulating a drive
+      // Now start emulating a drive
    MOV      r0, CMD_STATUS_OK
    SBCO     r0, CONST_PRURAM, PRU0_CMD, 4
    LBCO     START_INDEX_TIME, CONST_PRURAM, PRU0_START_INDEX_TIME, 4
@@ -615,7 +615,7 @@ SBCO TRACK_BIT, CONST_PRURAM, 0xf8, 4
    QBBC     nowrap, r0, 31
    LBCO     r2, CONST_PRURAM, PRU0_ROTATION_TIME, 4
    ADD      r0, r0, r2
-// DUP, not needed
+      // DUP, not needed
    MOV      r2, MAX_TIME_OFFSET
    QBLT     wait_wrap, r2, r0
    MOV      r24, (1 << GPIO1_TEST)
@@ -828,9 +828,9 @@ step_restart2:
 
    QBBC     selected0, r2, 0
 
-     // Drive 1 selected
+      // Drive 1 selected
    MOV      DRIVE_DATA, DRIVE_DATA_BYTES       // Offset of drive 1 data
-     // Cylinder of currently selected drive
+      // Cylinder of currently selected drive
    LBBO     r3, DRIVE_DATA, PRU0_DRIVE0_CUR_CYL, 4
    QBEQ     track0a, r3, 0
    CLR      r30, R30_TRACK_0_BIT
@@ -848,7 +848,7 @@ finish1:
 
 selected0:
    MOV      DRIVE_DATA, 0
-     // Cylinder of currently selected drive
+      // Cylinder of currently selected drive
    LBBO     r3, DRIVE_DATA, PRU0_DRIVE0_CUR_CYL, 4
    QBEQ     track0b, r3, 0
    CLR      r30, R30_TRACK_0_BIT
@@ -944,7 +944,7 @@ handle_head:
    QBEQ     glitch, r24, r1
    JMP      selected
 
-#else	// not REVC
+#else // not REVC
 
       // Handle GPIO interrupt from head or select lines changing
       // This routine needs to be under 1us from head change to
@@ -955,13 +955,13 @@ select_head:
       // Stop PRU 1. We will check stopped later
    MOV      PRU0_STATE, STATE_READ_DONE
    XOUT     10, PRU0_BUF_STATE, 4
-// Removed to try to speed up select. Doesn't seem to be needed.
-//      // Wait a little bit for the lines to settle
-//   LBCO     r1, CONST_IEP, IEP_COUNT, 4     // Get time
-//   ADD      r1, r1, SETTLE_TIME             // How long to wait
-//settle_lp:
-//   LBCO     r4, CONST_IEP, IEP_COUNT, 4     // Get time
-//   QBLT     settle_lp, r1, r4               // Did we reach settle time, no
+      // Removed to try to speed up select. Doesn't seem to be needed.
+      //      // Wait a little bit for the lines to settle
+   //   LBCO     r1, CONST_IEP, IEP_COUNT, 4     // Get time
+   //   ADD      r1, r1, SETTLE_TIME             // How long to wait
+   //settle_lp:
+   //   LBCO     r4, CONST_IEP, IEP_COUNT, 4     // Get time
+   //   QBLT     settle_lp, r1, r4               // Did we reach settle time, no
       // Clear GPIO 0 interrupt before reading value so if it changes we will
       // get a new interrupt and not miss a change
    MOV      r1, GPIO0 | GPIO_IRQSTATUS_0
@@ -1009,7 +1009,7 @@ step_restart:
    MOV      DRIVE_DATA, DRIVE_DATA_BYTES          // Offset of drive 1 data
    SET      r30, R30_READY_BIT    
    SET      r30, R30_SEEK_COMPLETE_BIT 
-     // Cylinder of currently selected drive
+      // Cylinder of currently selected drive
    LBBO     r3, DRIVE_DATA, PRU0_DRIVE0_CUR_CYL, 4
    // Turn on drive 1 select and LED and off drive 0
    MOV      r0, (1 << GPIO0_DRIVE1_LED)
@@ -1032,7 +1032,7 @@ selected0:
    MOV      DRIVE_DATA, 0
    SET      r30, R30_READY_BIT    
    SET      r30, R30_SEEK_COMPLETE_BIT 
-     // Cylinder of currently selected drive
+      // Cylinder of currently selected drive
    LBBO     r3, DRIVE_DATA, PRU0_DRIVE0_CUR_CYL, 4
    // Turn on drive 0 select and LED and off drive 1
    MOV      r0, (1 << GPIO0_DRIVE1_SEL_RECOVERY) | (1 << GPIO0_DRIVE0_LED)
@@ -1335,10 +1335,10 @@ settrack0:
    RET
 #endif
 
-// Get select and head value
-// Returns PRU0_CUR_SELECT_HEAD in r24. For REVC PRU0_CUR_SELECT_HEAD is
-// only head. Select written to PRU0_R31. PRU0_CUR_HEAD also updated with
-// current head value limited to number of heads.
+      // Get select and head value
+      // Returns PRU0_CUR_SELECT_HEAD in r24. For REVC PRU0_CUR_SELECT_HEAD is
+      // only head. Select written to PRU0_R31. PRU0_CUR_HEAD also updated with
+      // current head value limited to number of heads.
 get_select_head:
    MOV      r25, GPIO0 | GPIO_DATIN
    LBBO     r24, r25, 0, 4                   // Read bits
@@ -1475,9 +1475,9 @@ get4:
    CALL     checkstuff
    JMP      caploop
 
-// Send write delta times to PRU 1
-// r10 is word to write in
-// *** Changes r1 ***
+      // Send write delta times to PRU 1
+      // r10 is word to write in
+      // *** Changes r1 ***
 sendwrite:
       // Store word and update pointer
    SBCO     r10, CONST_PRUSHAREDRAM, PRU0_BUF_OFFSET, 4
@@ -1517,7 +1517,7 @@ checkstuff:
    
       // Done write, switch back to read
 write_done:
-// If it writes only zeros at the end we don't handle it. Halt if this occurs
+      // If it writes only zeros at the end we don't handle it. Halt if this occurs
 LBCO     r0, CONST_ECAP, TSCTR, 4     // Get time since last edge on MFM data
 MOV      r1, 2000/5                   // Check if more than 10 microseconds
 QBLE     noextra, r1, r0

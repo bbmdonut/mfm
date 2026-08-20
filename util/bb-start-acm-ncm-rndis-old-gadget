@@ -24,15 +24,15 @@
 #https://github.com/beagleboard/meta-beagleboard/blob/master/meta-beagleboard-extras/recipes-support/usb-gadget/gadget-init/g-ether-load.sh
 
 if [ -f /etc/default/bb-mac-addr ] ; then
-	. /etc/default/bb-mac-addr
+    . /etc/default/bb-mac-addr
 elif [ -f /usr/bin/bb-setup-mac-address ] ; then
-	/usr/bin/bb-setup-mac-address
-	sync
-	. /etc/default/bb-mac-addr
+    /usr/bin/bb-setup-mac-address
+    sync
+    . /etc/default/bb-mac-addr
 fi
 
 if [ -f /etc/default/bb-boot ] ; then
-	. /etc/default/bb-boot
+    . /etc/default/bb-boot
 fi
 
 log="usb_gadget:"
@@ -72,34 +72,34 @@ usb_ms_ro=1
 #cpsw_5_mac = usb1 (USB host, pc side)
 
 run_libcomposite () {
-	if [ ! -d /sys/kernel/config/usb_gadget/g_multi/ ] ; then
-		echo "${log} Creating g_multi"
-		mkdir -p /sys/kernel/config/usb_gadget/g_multi || true
-		cd /sys/kernel/config/usb_gadget/g_multi
+    if [ ! -d /sys/kernel/config/usb_gadget/g_multi/ ] ; then
+        echo "${log} Creating g_multi"
+        mkdir -p /sys/kernel/config/usb_gadget/g_multi || true
+        cd /sys/kernel/config/usb_gadget/g_multi
 
-		echo ${usb_bcdUSB} > bcdUSB
-		echo ${usb_idVendor} > idVendor # Linux Foundation
-		echo ${usb_idProduct} > idProduct # Multifunction Composite Gadget
-		echo ${usb_bcdDevice} > bcdDevice
+        echo ${usb_bcdUSB} > bcdUSB
+        echo ${usb_idVendor} > idVendor # Linux Foundation
+        echo ${usb_idProduct} > idProduct # Multifunction Composite Gadget
+        echo ${usb_bcdDevice} > bcdDevice
 
-		#0x409 = english strings...
-		mkdir -p strings/0x409
+        #0x409 = english strings...
+        mkdir -p strings/0x409
 
-		echo ${usb_iserialnumber} > strings/0x409/serialnumber
-		echo ${usb_imanufacturer} > strings/0x409/manufacturer
-		echo ${usb_iproduct} > strings/0x409/product
+        echo ${usb_iserialnumber} > strings/0x409/serialnumber
+        echo ${usb_imanufacturer} > strings/0x409/manufacturer
+        echo ${usb_iproduct} > strings/0x409/product
 
-		mkdir -p configs/c.1/strings/0x409
-		echo "BeagleBone Composite" > configs/c.1/strings/0x409/configuration
+        mkdir -p configs/c.1/strings/0x409
+        echo "BeagleBone Composite" > configs/c.1/strings/0x409/configuration
 
-		echo 500 > configs/c.1/MaxPower
+        echo 500 > configs/c.1/MaxPower
 
-		if [ ! "x${USB_RNDIS_DISABLED}" = "xyes" ]; then
-			mkdir -p functions/rndis.usb0
-			if [ ! "x${USB0_HOST_ADDR}" = "x" ] ; then
-				echo ${USB0_HOST_ADDR} > functions/rndis.usb0/host_addr
-				echo ${USB0_DEV_ADDR} > functions/rndis.usb0/dev_addr
-			fi
+        if [ ! "x${USB_RNDIS_DISABLED}" = "xyes" ]; then
+            mkdir -p functions/rndis.usb0
+            if [ ! "x${USB0_HOST_ADDR}" = "x" ] ; then
+                echo ${USB0_HOST_ADDR} > functions/rndis.usb0/host_addr
+                echo ${USB0_DEV_ADDR} > functions/rndis.usb0/dev_addr
+            fi
 
 			# Starting with kernel 4.14, we can do this to match Microsoft's built-in RNDIS driver.
 			# Earlier kernels require the patch below as a work-around instead:

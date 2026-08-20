@@ -182,15 +182,15 @@ int main(int argc, char *argv[])
    // for ready, seek complete, and drive select)
    if (drive_params.ext_stepper)
    {
-	   if (pru_exec_program(0, "prucode0_ext_stepper.bin") != 0) {
-	      msg(MSG_FATAL, "Unable to execute prucode0_ext_stepper.bin\n");
-	      exit(1);
-	   }
+      if (pru_exec_program(0, "prucode0_ext_stepper.bin") != 0) {
+         msg(MSG_FATAL, "Unable to execute prucode0_ext_stepper.bin\n");
+         exit(1);
+      }
    } else {
-	   if (pru_exec_program(0, "prucode0.bin") != 0) {
-	      msg(MSG_FATAL, "Unable to execute prucode0.bin\n");
-	      exit(1);
-	   }
+      if (pru_exec_program(0, "prucode0.bin") != 0) {
+         msg(MSG_FATAL, "Unable to execute prucode0.bin\n");
+         exit(1);
+      }
    }
 
    pru_write_word(MEM_PRU0_DATA, PRU0_START_TIME_CLOCKS,

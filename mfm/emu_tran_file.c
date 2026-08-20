@@ -120,7 +120,7 @@
 //    Added start_time_ns to transition file header and incremented file
 //    version.
 // 10/19/14 DJG Added and modified functions to allow emulator file writes to
-// 	be buffered
+//    be buffered
 //
 // Copyright 2013 David Gesswein.
 // This file is part of MFM disk utilities.
@@ -859,25 +859,25 @@ int tran_file_seek_track(int fd, int seek_cyl, int seek_head,
    } else {
       lseek(fd, tran_file_info->file_header_size_bytes, SEEK_SET);
       while (!done) {
-	 tran_file_read(fd, &cyl, sizeof(cyl), &poly);
-	 tran_file_read(fd, &head, sizeof(head), &poly);
-	 tran_file_read(fd, &num_bytes, sizeof(num_bytes), &poly);
+         tran_file_read(fd, &cyl, sizeof(cyl), &poly);
+         tran_file_read(fd, &head, sizeof(head), &poly);
+         tran_file_read(fd, &num_bytes, sizeof(num_bytes), &poly);
 
-	 if (cyl == -1 && head == -1) {
-	    msg(MSG_DEBUG, "Unable to find cylinder %d head %d\n",
-		  seek_cyl, seek_head);
-	    rc = 1;
-	    done = 1;
-	 }
-	 if (cyl == seek_cyl && head == seek_head) {
-	    done = 1;
-	    lseek(fd, -4 * 3, SEEK_CUR);
-	 } else {
-	    if (lseek(fd, num_bytes + 4, SEEK_CUR) == -1) {
-	       msg(MSG_FATAL, "tran_file_seek_track seek failed\n");
-	       exit(1);
-	    }
-	 }
+         if (cyl == -1 && head == -1) {
+            msg(MSG_DEBUG, "Unable to find cylinder %d head %d\n",
+                  seek_cyl, seek_head);
+            rc = 1;
+            done = 1;
+         }
+         if (cyl == seek_cyl && head == seek_head) {
+            done = 1;
+            lseek(fd, -4 * 3, SEEK_CUR);
+         } else {
+            if (lseek(fd, num_bytes + 4, SEEK_CUR) == -1) {
+               msg(MSG_FATAL, "tran_file_seek_track seek failed\n");
+               exit(1);
+            }
+         }
       }
       return rc;
    }

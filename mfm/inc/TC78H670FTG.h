@@ -143,7 +143,7 @@ typedef struct
     uint8_t phasePosition; // Used to keep track of phaseA/B to allow single steps in either direction
 } PRODRIVERSettings;
 
-	//Constructor generates default PRODRIVERSettings.
+  //Constructor generates default PRODRIVERSettings.
   PRODRIVERSettings *PRODRIVER( void );
 
   bool pd_begin( void ); // Call to apply PRODRIVERSettings and returns ERR stat

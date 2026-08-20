@@ -282,7 +282,7 @@ SECTOR_DECODE_STATUS corvus_process_data(STATE_TYPE *state, uint8_t bytes[],
       if (ecc_span != 0) {
          sector_status.status |= SECT_ECC_RECOVERED;
       }
-      mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
+      dc_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
             seek_difference, &sector_status, drive_params, sector_status_list);
 
       sector_status.ecc_span_corrected_data = ecc_span;
@@ -504,7 +504,7 @@ fprintf(out,"$var wire 1 & sector $end\n");
          // the clock. Don't update PLL if this is a long burst without
          // transitions
          if (remaining_delta == 0) {
-            avg_bit_sep_time = nominal_bit_sep_time + filter(clock_time, &filter_state);
+            avg_bit_sep_time = nominal_bit_sep_time + dc_filter(clock_time, &filter_state);
          }
 #if DEBUG
          //printf("track %d clock %f\n", track_time, clock_time);

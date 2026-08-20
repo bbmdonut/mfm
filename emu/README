@@ -34,14 +34,14 @@ See mfm_emu_doc.* for how to run the program.
 All the code I created is released under GPLv3 or later.
 
 Source file organization
-mfm_emu.c	Top file for reading MFM disks
-prucode0.p	The assembly program running in PRU 0
-prucode1.p	The assembly program running in PRU 1
-cmd.h		The PRU code commands, return status, and various memory
-		location definitions
-parse_cmdline.c	Routines for parsing and printing the command line options
-Makefile	Makefile for building the two executables and PRU code
-<other>.h	Various header files which define function prototypes
+mfm_emu.c          Top file for reading MFM disks
+prucode0.p         The assembly program running in PRU 0
+prucode1.p         The assembly program running in PRU 1
+cmd.h              The PRU code commands, return status, and various memory
+                   location definitions
+parse_cmdline.c    Routines for parsing and printing the command line options
+Makefile           Makefile for building the two executables and PRU code
+<other>.h          Various header files which define function prototypes
 
 Other files
 setup_emu  Script to configure the beaglebone pins

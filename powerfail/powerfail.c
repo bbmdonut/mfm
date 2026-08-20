@@ -157,7 +157,7 @@ int main(int argc, char *argv[])
                msg(MSG_INFO, "Voltage %.2f under threshold %.2f count %d\n",
                      voltage, drive_params.threshold, under_count);
             }
-	    // do not enter a boot loop if BB is powered but cape is not
+            // do not enter a boot loop if BB is powered but cape is not
             if (++under_count >= min_under_count) {
                if (valid) {
                   msg(MSG_FATAL, "Voltage under threshold too long\n");

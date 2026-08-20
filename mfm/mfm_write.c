@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
       exit(1);
    }
    // DMA channel 7 and PaRAM blocks 7-8 are reserved in our new dto
-   pru_write_word(MEM_PRU1_DATA,PRU1_DMA_CHANNEL, 7);		//  (Moved here by Gleb Larionov 05.05.2023)
+   pru_write_word(MEM_PRU1_DATA,PRU1_DMA_CHANNEL, 7); //  (Moved here by Gleb Larionov 05.05.2023)
    if (pru_exec_program(1, "mfm_write1.bin") != 0) {
       msg(MSG_FATAL, "Unable to execute mfm_write1.bin\n");
       exit(1);

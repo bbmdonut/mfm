@@ -181,13 +181,13 @@ void drive_read_disk(DRIVE_PARAMS *drive_params, void *deltas, int max_deltas)
 
             drive_read_track(drive_params, cyl, head, deltas, max_deltas, 0);
 
-	    if (drive_params->is_rll) {
-		   sector_status = rll_decode_track(drive_params, cyl, head,
-		      deltas, &seek_difference, sector_status_list);
-	    } else {
-         sector_status = mfm_decode_track(drive_params, cyl, head,
-            deltas, &seek_difference, sector_status_list);
-	    }
+      if (drive_params->is_rll) {
+        sector_status = rll_decode_track(drive_params, cyl, head,
+           deltas, &seek_difference, sector_status_list);
+      } else {
+        sector_status = mfm_decode_track(drive_params, cyl, head,
+           deltas, &seek_difference, sector_status_list);
+      }
 
             // See if sector list shows any with errors. The sector list
             // contains the information on the best read for each sector so

@@ -100,10 +100,10 @@
 #define EMCRH       0x030C
 #define QEMCR       0x0314
 #define CCERRCLR    0x031C
-#define DRAE0	     0x0340
-#define DRAE1	     0x0348
-#define DRAE2	     0x0350
-#define DRAE3	     0x0358
+#define DRAE0       0x0340
+#define DRAE1       0x0348
+#define DRAE2       0x0350
+#define DRAE3       0x0358
 #define QWMTHRA     0x0620
 #define GLOBAL_ESR  0x1010
 #define GLOBAL_CER  0x1018
@@ -117,14 +117,14 @@
 #define DRAE_OFFSET 0x1200
 //#define DRAE_OFFSET 0x0000
 #define ESR         (0x1010+DRAE_OFFSET)
-#define EECR	     (0x1028+DRAE_OFFSET)
-#define SECR	     (0x1040+DRAE_OFFSET)
+#define EECR        (0x1028+DRAE_OFFSET)
+#define SECR        (0x1040+DRAE_OFFSET)
 #define IER         (0x1050+DRAE_OFFSET)
 #define IPR         (0x1068+DRAE_OFFSET)
 #define ICR         (0x1070+DRAE_OFFSET)
-#define IESRL	     (0x1060+DRAE_OFFSET)
+#define IESRL       (0x1060+DRAE_OFFSET)
 #define IEVAL       (0x1078+DRAE_OFFSET)
-#define IECR	     (0x1058+DRAE_OFFSET)
+#define IECR        (0x1058+DRAE_OFFSET)
 
 
 //EDMA PARAM registers

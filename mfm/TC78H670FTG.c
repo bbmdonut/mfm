@@ -49,11 +49,11 @@ PRODRIVERSettings settings;
 //****************************************************************************//
 PRODRIVERSettings *PRODRIVER( void )
 {
-	//Construct with these default settings if nothing is specified
+  //Construct with these default settings if nothing is specified
 
-   //Select control mode
-   settings.controlMode = PRODRIVER_MODE_CLOCKIN; // PRODRIVER_MODE_CLOCKIN or PRODRIVER_MODE_SERIAL
-   settings.stepResolutionMode = PRODRIVER_STEP_RESOLUTION_FIXED_FULL; // many options, see header file or ds pg 8
+  //Select control mode
+  settings.controlMode = PRODRIVER_MODE_CLOCKIN; // PRODRIVER_MODE_CLOCKIN or PRODRIVER_MODE_SERIAL
+  settings.stepResolutionMode = PRODRIVER_STEP_RESOLUTION_FIXED_FULL; // many options, see header file or ds pg 8
   settings.stepResolution = PRODRIVER_STEP_RESOLUTION_1_1; // IC default on bootup
 
   //Select default settings for SERIAL MODE specific settings
@@ -89,16 +89,16 @@ PRODRIVERSettings *PRODRIVER( void )
 bool pd_begin( void )
 {
   if (settings.controlMode == PRODRIVER_MODE_AUTONICS) {
-     pinMode(settings.mode0Pin, OUTPUT);
-     digitalWrite(settings.mode0Pin, LOW);
-     pinMode(settings.mode2Pin, OUTPUT);
-     digitalWrite(settings.mode2Pin, LOW);
-     return true;
+    pinMode(settings.mode0Pin, OUTPUT);
+    digitalWrite(settings.mode0Pin, LOW);
+    pinMode(settings.mode2Pin, OUTPUT);
+    digitalWrite(settings.mode2Pin, LOW);
+    return true;
   } else {
-     pd_pinSetup(); // sets arduino pins to necessary initial pinModes and statuses
-     pd_controlModeSelect(); // "boots up" IC with correct statuses on MODE pins
+    pd_pinSetup(); // sets arduino pins to necessary initial pinModes and statuses
+    pd_controlModeSelect(); // "boots up" IC with correct statuses on MODE pins
 
-     return pd_errorStat(); //We're all setup!
+    return pd_errorStat(); //We're all setup!
   }
 }
 
@@ -234,7 +234,6 @@ bool pd_controlModeSelect( void )
 // Overcurrent (ISD)
 // Motor Load Open (OPD)
 // returns true if things are good and there is no error detected
-
 bool pd_errorStat( void )
 {
   if(digitalRead(settings.errorPin) == true)
@@ -253,54 +252,54 @@ bool pd_errorStat( void )
 bool pd_step( uint32_t steps, bool direction, float clockDelay)
 {
   if (settings.controlMode == PRODRIVER_MODE_AUTONICS) {
-     int pin;
-     // This is setup to make my ST251 rotate to higher cylinder
-     // when stepping to higher cylinder.
-     if(direction == true) {
-        pin = settings.mode2Pin; // CCW pin
-     } else {
-        pin = settings.mode0Pin; // CW pin
-     }
-     // step the motor the desired amount of steps
-     // each up-edge of the CLK signal (aka mode2Pin)
-     // will shift the motor's electrical angle per step.
-     for(uint16_t i = 0 ; i < steps ; i++)
-     {
-       digitalWrite(pin, HIGH);
-       delayMicroseconds(lround(clockDelay / 2 * 1000));
-       digitalWrite(pin, LOW);
-       delayMicroseconds(lround(clockDelay / 2 * 1000));
-     }
-     return true;
+    int pin;
+    // This is setup to make my ST251 rotate to higher cylinder
+    // when stepping to higher cylinder.
+    if(direction == true) {
+      pin = settings.mode2Pin; // CCW pin
+    } else {
+      pin = settings.mode0Pin; // CW pin
+    }
+    // step the motor the desired amount of steps
+    // each up-edge of the CLK signal (aka mode2Pin)
+    // will shift the motor's electrical angle per step.
+    for(uint16_t i = 0 ; i < steps ; i++)
+    {
+      digitalWrite(pin, HIGH);
+      delayMicroseconds(lround(clockDelay / 2 * 1000));
+      digitalWrite(pin, LOW);
+      delayMicroseconds(lround(clockDelay / 2 * 1000));
+    }
+    return true;
   } else {
-     pd_enable();
+    pd_enable();
 
-     // set CW-CWW pin (aka mode3Pin) to the desired direction
-     // CW-CCW pin controls the rotation direction of the motor.
-     // When set to H, the current of OUT_A is output first, with a phase difference of 90°.
-     // When set to L, the current of OUT_B is output first with a phase difference of 90°
-     if(direction == true)
-     {
-       printf("TC: Setting direction pin HIGH\n");
-       digitalWrite(settings.mode3Pin, HIGH);
-     }
-     else{
-       printf("TC: Setting direction pin LOW\n");
-       digitalWrite(settings.mode3Pin, LOW);
-     }
+    // set CW-CWW pin (aka mode3Pin) to the desired direction
+    // CW-CCW pin controls the rotation direction of the motor.
+    // When set to H, the current of OUT_A is output first, with a phase difference of 90°.
+    // When set to L, the current of OUT_B is output first with a phase difference of 90°
+    if(direction == true)
+    {
+      printf("TC: Setting direction pin HIGH\n");
+      digitalWrite(settings.mode3Pin, HIGH);
+    }
+    else{
+      printf("TC: Setting direction pin LOW\n");
+      digitalWrite(settings.mode3Pin, LOW);
+    }
 
-     // step the motor the desired amount of steps
-     // each up-edge of the CLK signal (aka mode2Pin)
-     // will shift the motor's electrical angle per step.
-     for(uint16_t i = 0 ; i < steps ; i++)
-     {
-       digitalWrite(settings.mode2Pin, LOW);
-       delayMicroseconds(lround(clockDelay / 2 * 1000));
-       digitalWrite(settings.mode2Pin, HIGH);
-       delayMicroseconds(lround(clockDelay / 2 * 1000));
-     }
-     digitalWrite(settings.mode2Pin, LOW);
-     return pd_errorStat();
+    // step the motor the desired amount of steps
+    // each up-edge of the CLK signal (aka mode2Pin)
+    // will shift the motor's electrical angle per step.
+    for(uint16_t i = 0 ; i < steps ; i++)
+    {
+      digitalWrite(settings.mode2Pin, LOW);
+      delayMicroseconds(lround(clockDelay / 2 * 1000));
+      digitalWrite(settings.mode2Pin, HIGH);
+      delayMicroseconds(lround(clockDelay / 2 * 1000));
+    }
+    digitalWrite(settings.mode2Pin, LOW);
+    return pd_errorStat();
   }
 }
 
@@ -322,8 +321,8 @@ bool pd_changeStepResolution( uint8_t resolution)
   uint8_t clock = settings.mode2Pin;
 
   // setup pins for a new step resolution change. Both need to be pulled HIGH
-    digitalWrite(clock, HIGH);
-    digitalWrite(setEn, HIGH);
+  digitalWrite(clock, HIGH);
+  digitalWrite(setEn, HIGH);
 
   // find out how many shifts we need in either direction.
   uint8_t shift = 0;
@@ -520,33 +519,33 @@ bool pd_stepSerialSingle(bool direction)
 
   switch (settings.phasePosition)
   {
-  case 1:
-    settings.phaseA = 1;
-    settings.phaseB = 1;
-    return pd_sendSerialCommand();
-    break;
+    case 1:
+      settings.phaseA = 1;
+      settings.phaseB = 1;
+      return pd_sendSerialCommand();
+      break;
 
-  case 2:
-    settings.phaseA = 0;
-    settings.phaseB = 1;
-    return pd_sendSerialCommand();
-    break;
+    case 2:
+      settings.phaseA = 0;
+      settings.phaseB = 1;
+      return pd_sendSerialCommand();
+      break;
 
-  case 3:
-    settings.phaseA = 0;
-    settings.phaseB = 0;
-    return pd_sendSerialCommand();
-    break;
+    case 3:
+      settings.phaseA = 0;
+      settings.phaseB = 0;
+      return pd_sendSerialCommand();
+      break;
 
-  case 4:
-    settings.phaseA = 1;
-    settings.phaseB = 0;
-    return pd_sendSerialCommand();
-    break;
+    case 4:
+      settings.phaseA = 1;
+      settings.phaseB = 0;
+      return pd_sendSerialCommand();
+      break;
 
-  default:
-    return false;
-    break;
+    default:
+      return false;
+      break;
   }
 }
 

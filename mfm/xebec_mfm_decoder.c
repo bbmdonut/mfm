@@ -313,7 +313,7 @@ SECTOR_DECODE_STATUS xebec_process_data(STATE_TYPE *state, uint8_t bytes[],
                sector_status.cyl, sector_status.head, sector_status.sector);
       }
 
-      mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
+      dc_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
             seek_difference, &sector_status, drive_params, sector_status_list);
 
       *state = DATA_SYNC;
@@ -501,7 +501,7 @@ SECTOR_DECODE_STATUS xebec_decode_track(DRIVE_PARAMS *drive_params, int cyl,
          // the clock. Don't update PLL if this is a long burst without
          // transitions
          if (remaining_delta == 0) {
-            avg_bit_sep_time = nominal_bit_sep_time + filter(clock_time, &filter_state);
+            avg_bit_sep_time = nominal_bit_sep_time + dc_filter(clock_time, &filter_state);
          }
 #if DEBUG
          //printf("track %d clock %f\n", track_time, clock_time);
@@ -652,7 +652,7 @@ if ((raw_word & 0xff) == 0x49 && head == 0) {
 
                         // Don't perform ECC corrections. They can be
                         // false corrections when not actually sector header.
-                        mfm_crc_bytes(drive_params, bytes,
+                        dc_crc_bytes(drive_params, bytes,
                            header_bytes_crc_len, PROCESS_HEADER, &crc,
                            &ecc_span, &init_status, 0);
 

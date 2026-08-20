@@ -175,8 +175,8 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params)
          drive_params->rpm = strtoul(optarg, NULL, 0);
          break;
       case 's':
-	 drive_params->sync = 1;
-	 break;
+         drive_params->sync = 1;
+         break;
       case '?':
          exit(1);
          break;

@@ -3,7 +3,7 @@
  *
  * 09/12/23 JST Changes to support 5.10 kernel and --sync option
  * 11/09/14 DJG Added new function prototypes for emulator file
- * 	buffering and structure changes for buffering and other new
+ *     buffering and structure changes for buffering and other new
  *     command line options
  *  Created on: Jan 25, 2014
  *      Author: djg

@@ -93,66 +93,66 @@
 // These are registers that are used globally. Check registers defined in 
 // cmd.h if looking for free registers.
 
-   // Value 32
-   // May be able to be replaced by RSB with normal constant if needed
+      // Value 32
+      // May be able to be replaced by RSB with normal constant if needed
 #define CONST_32        r7.b3
 #define NEXT_DMA_WCOUNT r7.w0 
 #define NEXT_DMA_WCOUNT_MSB 15
-   // r8 PRU1_BUF_STATE
-   // r9 PRU0_BUF_STATE
-   // Current offset into DDR memory. Not updated during read
+      // r8 PRU1_BUF_STATE
+      // r9 PRU0_BUF_STATE
+      // Current offset into DDR memory. Not updated during read
 #define DDR_OFFSET    r10
-   // Words in DDR memory left to process in track
+      // Words in DDR memory left to process in track
 #define WORDS_LEFT    r11
-   // Count bit time during write to keep read data in sync so we
-   // can switch to it at end of write
+      // Count bit time during write to keep read data in sync so we
+      // can switch to it at end of write
 #define BIT_TIME_COUNT r12.w0
-   // Address in PRU RAM DMA buffer
+      // Address in PRU RAM DMA buffer
 #define BUF_ADDR      r13
-   // Current data word processing from DDR
+      // Current data word processing from DDR
 #define WORD1         r14
-   // Next data word processing
+      // Next data word processing
 #define WORD2         r15
 // r16 unused
-   // Total number of bytes in track (need to change LBCO if changed to w0)
+      // Total number of bytes in track (need to change LBCO if changed to w0)
 #define TRACK_BYTES   r17
 // r18 TRACK_BIT
 // r19.w0 call return addr, r19.w2 save call return
 // r20 is DRIVE_DATA
-   // Count of bits in track. Must be in byte field
+      // Count of bits in track. Must be in byte field
 #define BIT_COUNT     r21.b2
 #define BIT_COUNT_MSB 7
-   // Clocks in a MFM clock/data bit cell
+      // Clocks in a MFM clock/data bit cell
 #define BIT_PRU_CLOCKS r21.b1
-   // Threshold for detecting zero bit cell
+      // Threshold for detecting zero bit cell
 #define ZERO_THRESHOLD r21.b0
-   // Offset from start of DDR memory of track data
+      // Offset from start of DDR memory of track data
 #define TRACK_OFFSET  r22
-   // Physical address of start of DDR memory
+      // Physical address of start of DDR memory
 #define DDR_ADDR      r23
 // r24-r29 subroutine usage
 
 // Overwritten when multiply used
-   // Base address of EDMA registers
+      // Base address of EDMA registers
 #define EDMA_BASE     r26
-   // EDMA channel to use
+      // EDMA channel to use
 #define EDMA_PARAM_BASE r27
-   // EDMA channel to use
+      // EDMA channel to use
 #define EDMA_CHANNEL  r28
 
 
-   // DMA buffers are 64 bytes/16 words. Must be power of 2 and <= 128
+      // DMA buffers are 64 bytes/16 words. Must be power of 2 and <= 128
 #define DMA_SIZE      64
-   // Must be on 256 byte boundry
+      // Must be on 256 byte boundry
 #define READ_BUF_1_ADDR               0x400
 #define READ_BUF_2_ADDR               (READ_BUF_1_ADDR + DMA_SIZE)
 
-   // Time in PRU clocks from write end to output read data
+      // Time in PRU clocks from write end to output read data
 #define WRITE_READ_TIME 3100/5
-   // Time from read time requested to bits we generate
-   // 9.55 microseconds in PRU clocks. This allows for completing DMA
-   // If this is increased MAX_TIME_OFFSET IN prucode0.p will need to
-   // be increased.
+      // Time from read time requested to bits we generate
+      // 9.55 microseconds in PRU clocks. This allows for completing DMA
+      // If this is increased MAX_TIME_OFFSET IN prucode0.p will need to
+      // be increased.
 #define NEW_READ_TIME 9600/5
 
 
@@ -186,7 +186,7 @@ START:
 
       // Get address and size of DDR buffer. Currently we don't use size
    LBCO     DDR_ADDR, CONST_PRURAM, PRU_DDR_ADDR, 4
-   //LBCO     DDR_SIZE, CONST_PRURAM, PRU_DDR_SIZE, 4
+      //LBCO     DDR_SIZE, CONST_PRURAM, PRU_DDR_SIZE, 4
 
    MOV      r2, 0
    SBCO     r2, CONST_PRURAM, PRU1_BAD_PATTERN_COUNT, 4
@@ -199,121 +199,122 @@ START:
    SBCO     r2, CONST_PRURAM, PRU1_DRIVE0_TRK_DIRTY, 4
    SBCO     r2, CONST_PRURAM, PRU1_DRIVE1_TRK_DIRTY, 4
 
-   // Configure DMA
+      // Configure DMA
 
-    // Load base addresses into registers
-    MOV  EDMA_BASE, EDMA0_CC_BASE
-    LBCO EDMA_CHANNEL, CONST_PRURAM, PRU1_DMA_CHANNEL, 4  // Read channel
+      // Load base addresses into registers
+   MOV  EDMA_BASE, EDMA0_CC_BASE
+   LBCO EDMA_CHANNEL, CONST_PRURAM, PRU1_DMA_CHANNEL, 4  // Read channel
 
-    // Setup EDMA region access for Shadow Region 1
-    MOV  r4, 0
-    // Bit mask for channel. Only works for channels < 32
-    SET  r4, EDMA_CHANNEL 
-    MOV  R2, DRAE1
-    SBBO r4, EDMA_BASE,  R2, 4 // Region 1
+      // Setup EDMA region access for Shadow Region 1
+   MOV  r4, 0
+      // Bit mask for channel. Only works for channels < 32
+   SET  r4, EDMA_CHANNEL 
+   MOV  R2, DRAE1
+   SBBO r4, EDMA_BASE,  R2, 4 // Region 1
    
-    // Clear channel event from EDMA event registers
-    MOV   r3, GLOBAL_SECR
-    SBBO  r4, EDMA_BASE,  r3, 4 
-    MOV   r3, GLOBAL_ICR
-    SBBO  r4, EDMA_BASE,  r3, 4 
-    MOV   r3, GLOBAL_IER
-    LBBO  r0, EDMA_BASE,  r3, 4 
-    // Disable channel interrupt
-    MOV   r3, GLOBAL_IECR
-    SBBO  r4, EDMA_BASE,  r3, 4 
-    // Enable shadow 1 interrupt. Interrupts don't save time since
-    // Syncronizing write to clear interrupt takes as much time as
-    // just polling.
-//    MOV   r3, IESRL
-//    SBBO  r4, EDMA_BASE,  r3, 4 
+      // Clear channel event from EDMA event registers
+   MOV   r3, GLOBAL_SECR
+   SBBO  r4, EDMA_BASE,  r3, 4 
+   MOV   r3, GLOBAL_ICR
+   SBBO  r4, EDMA_BASE,  r3, 4 
+   MOV   r3, GLOBAL_IER
+   LBBO  r0, EDMA_BASE,  r3, 4 
+      // Disable channel interrupt
+   MOV   r3, GLOBAL_IECR
+   SBBO  r4, EDMA_BASE,  r3, 4 
+   
+      // Enable shadow 1 interrupt. Interrupts don't save time since
+      // Syncronizing write to clear interrupt takes as much time as
+      // just polling.
+      // MOV   r3, IESRL
+      // SBBO  r4, EDMA_BASE,  r3, 4 
 
-    // Clear event missed register
-    MOV   r3, EMCR
-    SBBO  r4, EDMA_BASE,  r3, 4 
+      // Clear event missed register
+   MOV   r3, EMCR
+   SBBO  r4, EDMA_BASE,  r3, 4 
 
-    // DCHMAP_# is no longer set by Linux post-3.x kernels
-    // It is also harmless to set this in 3.x
-    // For channel n, we use PaRAM blocks n and n+1
-    // DCHMAP expects this in bits 13 thru 5
-    LDI r4, DCHMAP_0
-    LSL r1, EDMA_CHANNEL, 2
-    ADD r4, r4, r1
-    LSL r1, EDMA_CHANNEL, 5
-    SBBO r1, EDMA_BASE, r4, 4
+      // DCHMAP_# is no longer set by Linux post-3.x kernels
+      // It is also harmless to set this in 3.x
+      // For channel n, we use PaRAM blocks n and n+1
+      // DCHMAP expects this in bits 13 thru 5
+   LDI r4, DCHMAP_0
+   LSL r1, EDMA_CHANNEL, 2
+   ADD r4, r4, r1
+   LSL r1, EDMA_CHANNEL, 5
+   SBBO r1, EDMA_BASE, r4, 4
 
-    // Setup and store PaRAM data for transfer
-    LSL  EDMA_PARAM_BASE, EDMA_CHANNEL, 5 // channel*32
-    MOV  r4, PARAM_OFFSET
-    ADD  EDMA_PARAM_BASE, EDMA_PARAM_BASE, r4
-        // Address of our channel PaRAM
-    ADD  EDMA_PARAM_BASE, EDMA_PARAM_BASE, EDMA_BASE  
+      // Setup and store PaRAM data for transfer
+   LSL  EDMA_PARAM_BASE, EDMA_CHANNEL, 5 // channel*32
+   MOV  r4, PARAM_OFFSET
+   ADD  EDMA_PARAM_BASE, EDMA_PARAM_BASE, r4
+      // Address of our channel PaRAM
+   ADD  EDMA_PARAM_BASE, EDMA_PARAM_BASE, EDMA_BASE  
 
-    // Build initial DMA descriptors. They will be modifed by dma routines
-    // First entry OPT TCC = channel, enable transfer complete interrupt
-    // SRC will be set later
-    // ACNT = DMA_SIZE, BCNT = 1,
-    // DST = buffer 1
-    // SRC, DST BIDX = 0
-    // LINK = next PaRAM set, BCNTRLD = 0
-    // CCNT = 1
-    LSL   r0, EDMA_CHANNEL, 12
-    OR    r0.w2, r0.w2, 0x10
-    SBBO  r0, EDMA_PARAM_BASE, OPT, 4
-       // This will be updated when submitted
-    SBBO  DDR_ADDR, EDMA_PARAM_BASE,  SRC, 4
-    MOV   r0, DMA_SIZE
-    SBBO  r0, EDMA_PARAM_BASE, A_B_CNT, 2  	
-    MOV   r0, 1
-    SBBO  r0, EDMA_PARAM_BASE, A_B_CNT+2, 2	 		
-    MOV   r0, READ_BUF_1_ADDR
-    LBCO  r1, CONST_PRURAM, PRU_DATARAM_ADDR, 4
-    ADD   r0, r0, r1
-    SBBO  r0, EDMA_PARAM_BASE, DST, 4
-    MOV   r0, 0
-    SBBO  r0, EDMA_PARAM_BASE, SRC_DST_BIDX, 4
-    ADD   r0, EDMA_PARAM_BASE, 32
-    MOV   r0.w2, 0
-    SBBO  r0, EDMA_PARAM_BASE, LINK_BCNTRLD, 4
-    MOV   r0, 0
-    SBBO  r0, EDMA_PARAM_BASE, SRC_DST_CIDX, 4
-    MOV   r0, 1
-    SBBO  r0, EDMA_PARAM_BASE, CCNT, 2
+      // Build initial DMA descriptors. They will be modifed by dma routines
+      // First entry OPT TCC = channel, enable transfer complete interrupt
+      // SRC will be set later
+      // ACNT = DMA_SIZE, BCNT = 1,
+      // DST = buffer 1
+      // SRC, DST BIDX = 0
+      // LINK = next PaRAM set, BCNTRLD = 0
+      // CCNT = 1
+   LSL   r0, EDMA_CHANNEL, 12
+   OR    r0.w2, r0.w2, 0x10
+   SBBO  r0, EDMA_PARAM_BASE, OPT, 4
+      // This will be updated when submitted
+   SBBO  DDR_ADDR, EDMA_PARAM_BASE,  SRC, 4
+   MOV   r0, DMA_SIZE
+   SBBO  r0, EDMA_PARAM_BASE, A_B_CNT, 2  
+   MOV   r0, 1
+   SBBO  r0, EDMA_PARAM_BASE, A_B_CNT+2, 2 
+   MOV   r0, READ_BUF_1_ADDR
+   LBCO  r1, CONST_PRURAM, PRU_DATARAM_ADDR, 4
+   ADD   r0, r0, r1
+   SBBO  r0, EDMA_PARAM_BASE, DST, 4
+   MOV   r0, 0
+   SBBO  r0, EDMA_PARAM_BASE, SRC_DST_BIDX, 4
+   ADD   r0, EDMA_PARAM_BASE, 32
+   MOV   r0.w2, 0
+   SBBO  r0, EDMA_PARAM_BASE, LINK_BCNTRLD, 4
+   MOV   r0, 0
+   SBBO  r0, EDMA_PARAM_BASE, SRC_DST_CIDX, 4
+   MOV   r0, 1
+   SBBO  r0, EDMA_PARAM_BASE, CCNT, 2
 
-    ADD   EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32     // Go to next entry
+   ADD   EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32     // Go to next entry
 
-    // Second entry OPT TCC = channel, enable transfer complete interrupt
-    // SRC will be set later
-    // ACNT = DMA_SIZE, BCNT = 1,
-    // DST = buffer 2
-    // SRC, DST BIDX = 0
-    // LINK = next PaRAM set, BCNTRLD = 0
-    // CCNT = 1
-    LSL   r0, EDMA_CHANNEL, 12
-    OR    r0.w2, r0.w2, 0x10		//TCINTEN and TCC = PruDmaChannel
-    SBBO  r0, EDMA_PARAM_BASE, OPT, 4
-       // This will be updated when submitted
-    SBBO  DDR_ADDR, EDMA_PARAM_BASE,  SRC, 4
-    MOV   r0, DMA_SIZE
-    SBBO  r0, EDMA_PARAM_BASE, A_B_CNT, 2  	
-    MOV   r0, 1
-    SBBO  r0, EDMA_PARAM_BASE, A_B_CNT+2, 2	 		
-    MOV   r0, READ_BUF_1_ADDR
-    LBCO  r1, CONST_PRURAM, PRU_DATARAM_ADDR, 4
-    ADD   r0, r0, r1
-    SBBO  r0, EDMA_PARAM_BASE, DST, 4
-    MOV   r0, 0
-    SBBO  r0, EDMA_PARAM_BASE, SRC_DST_BIDX, 4
-    // Reload from this entry
-    MOV   r0, EDMA_PARAM_BASE
-    MOV   r0.w2, 0
-    SBBO  r0, EDMA_PARAM_BASE, LINK_BCNTRLD, 4
-    MOV   r0, 0
-    SBBO  r0, EDMA_PARAM_BASE, SRC_DST_CIDX, 4
-    MOV   r0, 1
-    SBBO  r0, EDMA_PARAM_BASE, CCNT, 2
+      // Second entry OPT TCC = channel, enable transfer complete interrupt
+      // SRC will be set later
+      // ACNT = DMA_SIZE, BCNT = 1,
+      // DST = buffer 2
+      // SRC, DST BIDX = 0
+      // LINK = next PaRAM set, BCNTRLD = 0
+      // CCNT = 1
+   LSL   r0, EDMA_CHANNEL, 12
+   OR    r0.w2, r0.w2, 0x10 //TCINTEN and TCC = PruDmaChannel
+   SBBO  r0, EDMA_PARAM_BASE, OPT, 4
+      // This will be updated when submitted
+   SBBO  DDR_ADDR, EDMA_PARAM_BASE,  SRC, 4
+   MOV   r0, DMA_SIZE
+   SBBO  r0, EDMA_PARAM_BASE, A_B_CNT, 2  
+   MOV   r0, 1
+   SBBO  r0, EDMA_PARAM_BASE, A_B_CNT+2, 2 
+   MOV   r0, READ_BUF_1_ADDR
+   LBCO  r1, CONST_PRURAM, PRU_DATARAM_ADDR, 4
+   ADD   r0, r0, r1
+   SBBO  r0, EDMA_PARAM_BASE, DST, 4
+   MOV   r0, 0
+   SBBO  r0, EDMA_PARAM_BASE, SRC_DST_BIDX, 4
+      // Reload from this entry
+   MOV   r0, EDMA_PARAM_BASE
+   MOV   r0.w2, 0
+   SBBO  r0, EDMA_PARAM_BASE, LINK_BCNTRLD, 4
+   MOV   r0, 0
+   SBBO  r0, EDMA_PARAM_BASE, SRC_DST_CIDX, 4
+   MOV   r0, 1
+   SBBO  r0, EDMA_PARAM_BASE, CCNT, 2
 
-    ADD   EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32
+   ADD   EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32
 
       // Set multiply only mode. Only needs to be done once
    MOV      r25, 0                
@@ -321,7 +322,7 @@ START:
 
    LBCO     ZERO_THRESHOLD, CONST_PRURAM, PRU1_ZERO_BIT_THRESHOLD, 4
    LBCO     BIT_PRU_CLOCKS, CONST_PRURAM, PRU1_BIT_PRU_CLOCKS, 4
-        
+       
       // Local memory starts at address 0 in memory map
    MOV      CONST_32, 32
 
@@ -333,8 +334,8 @@ START:
    MOV      CYCLE_CNTR, PRU0_CONTROL | CYCLE
 
 wait_read:
-//SET r30, 0
-   // Wait for PRU0, exit if requested. 
+   //SET r30, 0
+      // Wait for PRU0, exit if requested. 
    MOV      PRU1_STATE, STATE_READ_DONE
    MOV      PRU1_BUF_OFFSET, 0
    XOUT     10, PRU1_BUF_STATE, 4 
@@ -345,7 +346,7 @@ wait_read_lp:
 
       // Get offset to drive data for selected drive
    XIN      10, DRIVE_DATA, 4         
-   // Get track byte count and convert to words, all must be same
+      // Get track byte count and convert to words, all must be same
    LBBO     TRACK_BYTES, DRIVE_DATA, PRU1_DRIVE0_TRACK_DATA_BYTES, 4 
 
    MOV      DDR_OFFSET, 0
@@ -438,14 +439,14 @@ bitloop:
       // Wrap if needed
    AND      PRU1_BUF_OFFSET, PRU1_BUF_OFFSET, SHARED_PWM_READ_MASK   
    XOUT     10, PRU1_BUF_STATE, 4          // Send our offset
-// PRU0 timeded out vary rarely at halt before filled: Instead of increasing
-// start delay this code which isn't really needed removed. Could also set data
-// available when 2/3 full to avoid increasing it at expense of more code.
-//   QBBC     noerr, r0, 24
-//   LBCO     r2, CONST_PRURAM, PRU1_BAD_PATTERN_COUNT, 4
-//   ADD      r2, r2, 1
-//   SBCO     r2, CONST_PRURAM, PRU1_BAD_PATTERN_COUNT, 4
-//noerr:
+      // PRU0 timeded out vary rarely at halt before filled: Instead of increasing
+      // start delay this code which isn't really needed removed. Could also set data
+      // available when 2/3 full to avoid increasing it at expense of more code.
+   //   QBBC     noerr, r0, 24
+   //   LBCO     r2, CONST_PRURAM, PRU1_BAD_PATTERN_COUNT, 4
+   //   ADD      r2, r2, 1
+   //   SBCO     r2, CONST_PRURAM, PRU1_BAD_PATTERN_COUNT, 4
+   //noerr:
       // Here we shift WORD1, WORD2 by r0.b3. If we use up all bits in WORD2
       // we read another word into WORD2 and possibly shift it to correct
       // position.
@@ -511,12 +512,12 @@ finished_full:
    XOUT     10, PRU1_BUF_STATE, 4                    
    JMP      finished
 
-   // Convert time to track bit and offset from start of track
-   // r0: time to convert
-   // Out:
-   // r4 = offset from start of track in words
-   // r27 = track bit count
-   // r26-r29 modified
+      // Convert time to track bit and offset from start of track
+      // r0: time to convert
+      // Out:
+      // r4 = offset from start of track in words
+      // r27 = track bit count
+      // r26-r29 modified
 convert_track_time:
       // Divide by r0 bit period. We multiply by 1/bit_period
       // scaled by 2^32 then divide the result by 2^32.
@@ -535,7 +536,7 @@ convert_ok:
    LSR      r4, r27, 5
    RET
 
-   // See if switch to write or terminated was requested. If not restart read.
+      // See if switch to write or terminated was requested. If not restart read.
 check_write:
    QBEQ    DONE, PRU0_STATE, STATE_EXIT
       // If PRU 0 stopped read restart, wait_read sets state to done
@@ -545,9 +546,9 @@ check_write:
    MOV      r25, GPIO1 | GPIO_SETDATAOUT
    SBBO     r24, r25, 0, 4
    HALT
-              
-   // Update memory pointers for word read and start DMA if needed
-   // r26-29 modified from check_dma and start_dma
+             
+      // Update memory pointers for word read and start DMA if needed
+      // r26-29 modified from check_dma and start_dma
 update_dma:
    XOUT     11, r0, 20   // Save r0-r4
       // Update pointer
@@ -557,7 +558,7 @@ update_dma:
    QBBS     need_dma, NEXT_DMA_WCOUNT, NEXT_DMA_WCOUNT_MSB  // Negative
    QBNE     no_dma, NEXT_DMA_WCOUNT, 0
 need_dma:
-   // Save return address before we do another call
+      // Save return address before we do another call
    XOUT     11, RETREG, 4
 
    CALL     check_dma
@@ -659,19 +660,19 @@ write_word:
    AND     r0, r0, WORD1                   // Clear bits we wish to change
    OR      WORD2, WORD2, r0                // And put them in
 just_write:
-   // If selected head is bad then don't actully write
+      // If selected head is bad then don't actully write
    LBCO    r0.w0, CONST_PRURAM_OTHER, PRU0_BAD_HEAD, 2
    QBNE    nowrite, r0.w0, 0
    SBBO    WORD2, DDR_ADDR, DDR_OFFSET, 4  // Store word
 nowrite:   
    ADD     DDR_OFFSET, DDR_OFFSET, 4       // Point to next
    SUB     WORDS_LEFT, WORDS_LEFT, 1
-   // Save return address before we do another call
+      // Save return address before we do another call
    MOV     RETREG.w2, RETREG.w0
 chk_update:
-   // Get bit count for 32 bit word. We want the DMA to follow the
-   // actual rotation time, not the MFM data bit time. This prevents
-   // abort when clocks slightly off on long write.
+      // Get bit count for 32 bit word. We want the DMA to follow the
+      // actual rotation time, not the MFM data bit time. This prevents
+      // abort when clocks slightly off on long write.
    LSL     r0, BIT_PRU_CLOCKS, 5
    QBGT    no_update, BIT_TIME_COUNT, r0
    SUB     BIT_TIME_COUNT, BIT_TIME_COUNT, r0
@@ -719,11 +720,11 @@ write_done_wait:
       // set by find_buf_loc
    JMP      restart_read
 
-   // Given bit count find location in buffer for word and count to
-   // next DMA
-   // in r2 = words into track buffer to convert, modified
-   // out BUF_ADDR, NEXT_DMA_WCOUNT modified
-   // r0 modified
+      // Given bit count find location in buffer for word and count to
+      // next DMA
+      // in r2 = words into track buffer to convert, modified
+      // out BUF_ADDR, NEXT_DMA_WCOUNT modified
+      // r0 modified
 find_buf_loc:
    LSR     WORDS_LEFT, TRACK_BYTES, 2       // divide by 4 to get words
    SUB     WORDS_LEFT, WORDS_LEFT, r2       // Words left
@@ -760,130 +761,129 @@ noerr2:
    AND     BUF_ADDR.b0, BUF_ADDR.b0, (DMA_SIZE*2-1)
    RET
 
-   // Start DMA from DDR to local memory
-   // r2 = size in bytes
-   // r3 = destination local address
-   // r4 = ddr offset
-   // r2, r24-r29 modified
+      // Start DMA from DDR to local memory
+      // r2 = size in bytes
+      // r3 = destination local address
+      // r4 = ddr offset
+      // r2, r24-r29 modified
 start_dma:
 LBCO    r24, CONST_PRURAM, 0xe0, 4
 SBCO    r24, CONST_PRURAM, 0xe4, 4
 LBBO    r24, CYCLE_CNTR, 0, 4   // get time
 SBCO    r24, CONST_PRURAM, 0xe0, 4
 
-    ADD     r24, r3, r2
-    AND     r24.b0, r24.b0, (DMA_SIZE*2-1)
-    SBCO    r24, CONST_PRURAM, PRU1_NEXT_DMA_RAM_OFFSET, 4
-    ADD     r24, r4, r2
-    ADD     r25, TRACK_BYTES, TRACK_OFFSET
+   ADD     r24, r3, r2
+   AND     r24.b0, r24.b0, (DMA_SIZE*2-1)
+   SBCO    r24, CONST_PRURAM, PRU1_NEXT_DMA_RAM_OFFSET, 4
+   ADD     r24, r4, r2
+   ADD     r25, TRACK_BYTES, TRACK_OFFSET
       // If past end of track wrap
-    QBLT    addr_ok, r25, r24
-    SUB     r24, r24, r25
-    ADD     r24, r24, TRACK_OFFSET
+   QBLT    addr_ok, r25, r24
+   SUB     r24, r24, r25
+   ADD     r24, r24, TRACK_OFFSET
 addr_ok:
-    SBCO    r24, CONST_PRURAM, PRU1_NEXT_DMA_DDR_OFFSET, 4
-    // Load base addresses into registers
-    MOV     EDMA_BASE, EDMA0_CC_BASE
-    LBCO    EDMA_CHANNEL, CONST_PRURAM, PRU1_DMA_CHANNEL, 4
-    // Setup and store PaRAM data for transfer
-    LSL     EDMA_PARAM_BASE, EDMA_CHANNEL, 5 // channel*32
-    MOV     r24, PARAM_OFFSET
-    ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, r24
-    ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, EDMA_BASE  
+   SBCO    r24, CONST_PRURAM, PRU1_NEXT_DMA_DDR_OFFSET, 4
+      // Load base addresses into registers
+   MOV     EDMA_BASE, EDMA0_CC_BASE
+   LBCO    EDMA_CHANNEL, CONST_PRURAM, PRU1_DMA_CHANNEL, 4
+      // Setup and store PaRAM data for transfer
+   LSL     EDMA_PARAM_BASE, EDMA_CHANNEL, 5 // channel*32
+   MOV     r24, PARAM_OFFSET
+   ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, r24
+   ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, EDMA_BASE  
 
-    ADD     r24, r4, DDR_ADDR
-    SBBO    r24, EDMA_PARAM_BASE,  SRC, 4
+   ADD     r24, r4, DDR_ADDR
+   SBBO    r24, EDMA_PARAM_BASE,  SRC, 4
 sbco r24, CONST_PRURAM, 0xd4, 4
-    LBCO    r24, CONST_PRURAM, PRU_DATARAM_ADDR, 4
-    ADD     r24, r24, r3
-    SBBO    r24, EDMA_PARAM_BASE, DST, 4
+   LBCO    r24, CONST_PRURAM, PRU_DATARAM_ADDR, 4
+   ADD     r24, r24, r3
+   SBBO    r24, EDMA_PARAM_BASE, DST, 4
 
-    // Find bytes left in track
-    ADD     r29, TRACK_BYTES, TRACK_OFFSET
-    SUB     r29, r29, r4
-    // First entry OPT TCC = channel, enable transfer complete interrupt
-    // SRC will be set later
-    // ACNT = DMA_SIZE, BCNT = 1,
-    // DST = buffer 1
-    // SRC, DST BIDX = 0
-    // LINK = next PaRAM set, BCNTRLD = 0
-    // CCNT = 1
-    LSL     r24, EDMA_CHANNEL, 12
-    QBGE    nowrap, r2, r29
-    // We need to wrap, chain to next
-    OR      r24.w2, r24.w2, 0x40
-    SBBO    r24, EDMA_PARAM_BASE, OPT, 4
-    MOV     r24, r29
-    MOV     r24.w2, 1
+      // Find bytes left in track
+   ADD     r29, TRACK_BYTES, TRACK_OFFSET
+   SUB     r29, r29, r4
+      // First entry OPT TCC = channel, enable transfer complete interrupt
+      // SRC will be set later
+      // ACNT = DMA_SIZE, BCNT = 1,
+      // DST = buffer 1
+      // SRC, DST BIDX = 0
+      // LINK = next PaRAM set, BCNTRLD = 0
+      // CCNT = 1
+   LSL     r24, EDMA_CHANNEL, 12
+   QBGE    nowrap, r2, r29
+      // We need to wrap, chain to next
+   OR      r24.w2, r24.w2, 0x40
+   SBBO    r24, EDMA_PARAM_BASE, OPT, 4
+   MOV     r24, r29
+   MOV     r24.w2, 1
 sbco r24, CONST_PRURAM, 0xd0, 4
-    SBBO    r24, EDMA_PARAM_BASE, A_B_CNT, 4  
+   SBBO    r24, EDMA_PARAM_BASE, A_B_CNT, 4  
 
-    ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32     // Go to next entry
+   ADD     EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32     // Go to next entry
 
-    // Remaining bytes
-    SUB     r2, r2, r29
-    // Start at beginning of track
-    ADD     r24, TRACK_OFFSET, DDR_ADDR
-    SBBO    r24, EDMA_PARAM_BASE,  SRC, 4
-    LBCO    r24, CONST_PRURAM, PRU_DATARAM_ADDR, 4
-    // And after last data transferd for dest
-    ADD     r24, r24, r3
-    ADD     r24, r24, r29
-    SBBO    r24, EDMA_PARAM_BASE, DST, 4
+      // Remaining bytes
+   SUB     r2, r2, r29
+      // Start at beginning of track
+   ADD     r24, TRACK_OFFSET, DDR_ADDR
+   SBBO    r24, EDMA_PARAM_BASE,  SRC, 4
+   LBCO    r24, CONST_PRURAM, PRU_DATARAM_ADDR, 4
+      // And after last data transferd for dest
+   ADD     r24, r24, r3
+   ADD     r24, r24, r29
+   SBBO    r24, EDMA_PARAM_BASE, DST, 4
 
-    // This will set the required last few entries for the first when jumped
-    // here or for the second on fall through
-    LSL     r24, EDMA_CHANNEL, 12
+      // This will set the required last few entries for the first when jumped
+      // here or for the second on fall through
+   LSL     r24, EDMA_CHANNEL, 12
 nowrap:
-    OR      r24.w2, r24.w2, 0x10
-    SBBO    r24, EDMA_PARAM_BASE, OPT, 4
+   OR      r24.w2, r24.w2, 0x10
+   SBBO    r24, EDMA_PARAM_BASE, OPT, 4
 
-    MOV     r24, r2
-    MOV     r24.w2, 1
-    SBBO    r24, EDMA_PARAM_BASE, A_B_CNT, 4  	
+   MOV     r24, r2
+   MOV     r24.w2, 1
+   SBBO    r24, EDMA_PARAM_BASE, A_B_CNT, 4  
 
-    // Clear flag
-    MOV     r24, 0
-    SET     r24, EDMA_CHANNEL
-    MOV     r25, ICR
-    SBBO    r24, EDMA_BASE, r25, 4
-    MOV     r25, ESR
-    // Triggering the transfer
-    SBBO    r24, EDMA_BASE, r25, 4
-LBBO    r24, CYCLE_CNTR, 0, 4   // get time
-SBCO    r24, CONST_PRURAM, 0xe8, 4
-    RET
+      // Clear flag
+   MOV     r24, 0
+   SET     r24, EDMA_CHANNEL
+   MOV     r25, ICR
+   SBBO    r24, EDMA_BASE, r25, 4
+   MOV     r25, ESR
+      // Triggering the transfer
+   SBBO    r24, EDMA_BASE, r25, 4
+   LBBO    r24, CYCLE_CNTR, 0, 4   // get time
+   SBCO    r24, CONST_PRURAM, 0xe8, 4
+   RET
 
-	 		
-   // r24-r26 modified
+      // r24-r26 modified
 wait_dma:
-    // Load base addresses into registers
-    MOV    EDMA_BASE, EDMA0_CC_BASE
-    MOV    r25, IPR
-    LBCO   EDMA_CHANNEL, CONST_PRURAM, PRU1_DMA_CHANNEL, 4
+      // Load base addresses into registers
+   MOV    EDMA_BASE, EDMA0_CC_BASE
+   MOV    r25, IPR
+   LBCO   EDMA_CHANNEL, CONST_PRURAM, PRU1_DMA_CHANNEL, 4
 wait_dma_loop:
-   // TODO: This is slow, should we use interrupt?
-    LBBO   r24, EDMA_BASE, r25, 4
-    QBBC   wait_dma_loop, r24, EDMA_CHANNEL
-LBBO    r24, CYCLE_CNTR, 0, 4   // get time
-SBCO    r24, CONST_PRURAM, 0xec, 4
-    RET
+      // TODO: This is slow, should we use interrupt?
+   LBBO   r24, EDMA_BASE, r25, 4
+   QBBC   wait_dma_loop, r24, EDMA_CHANNEL
+   LBBO    r24, CYCLE_CNTR, 0, 4   // get time
+   SBCO    r24, CONST_PRURAM, 0xec, 4
+   RET
 
-   // r24-r26 modified
+      // r24-r26 modified
 check_dma:
-    // Load base addresses into registers
-    MOV    EDMA_BASE, EDMA0_CC_BASE
-    MOV    r25, IPR
-    LBCO   EDMA_CHANNEL, CONST_PRURAM, PRU1_DMA_CHANNEL, 4
-   // TODO: This is slow, should we use interrupt?
-    LBBO   r24, EDMA_BASE, r25, 4
-    QBBC   wait_dma_halt, r24, EDMA_CHANNEL
-    RET
+      // Load base addresses into registers
+   MOV    EDMA_BASE, EDMA0_CC_BASE
+   MOV    r25, IPR
+   LBCO   EDMA_CHANNEL, CONST_PRURAM, PRU1_DMA_CHANNEL, 4
+      // TODO: This is slow, should we use interrupt?
+   LBBO   r24, EDMA_BASE, r25, 4
+   QBBC   wait_dma_halt, r24, EDMA_CHANNEL
+   RET
 wait_dma_halt:
    MOV      r24, (1 << GPIO1_TEST)
    MOV      r25, GPIO1 | GPIO_SETDATAOUT
    SBBO     r24, r25, 0, 4
-    HALT
+   HALT
 
 DONE:
       // Send notification to Host for program completion

@@ -187,9 +187,6 @@ SECTOR_DECODE_STATUS perq_decode_track(DRIVE_PARAMS *drive_parms, int cyl,
    int head, uint16_t deltas[], int *seek_difference,
    SECTOR_STATUS bad_sector_list[]);
 
-void mfm_check_header_values(int exp_cyl, int exp_head, int *sector_index,
-   int sector_size, int *seek_difference, SECTOR_STATUS *sector_status,
-   DRIVE_PARAMS *drive_params, SECTOR_STATUS sector_status_list[]);
 void mfm_decode_setup(DRIVE_PARAMS *drive_params, int write);
 void mfm_decode_done(DRIVE_PARAMS *drive_params);
 int mfm_write_sector(uint8_t bytes[], DRIVE_PARAMS *drive_params,
@@ -200,10 +197,6 @@ int mfm_write_metadata(uint8_t bytes[], DRIVE_PARAMS *drive_params,
 void init_sector_status_list(SECTOR_STATUS *sector_status_list, int num_sectors);
 void mfm_dump_bytes(uint8_t bytes[], int len, int cyl, int head,
       int sector_index, int msg_level);
-
-SECTOR_DECODE_STATUS mfm_crc_bytes(DRIVE_PARAMS *drive_params, uint8_t bytes[],
-    int bytes_crc_len, int state, uint64_t *crc_ret, int *ecc_span,
-    SECTOR_DECODE_STATUS *init_status, int perform_ecc);
 
 SECTOR_DECODE_STATUS mfm_process_bytes(DRIVE_PARAMS *drive_params, uint8_t bytes[],
       int bytes_crc_len, int total_bytes, STATE_TYPE *state, int cyl,

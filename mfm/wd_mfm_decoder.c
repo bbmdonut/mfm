@@ -189,7 +189,7 @@ static inline float filter(float v, float *delay)
 // Return non zero if cylinder passed in is last cylinder on drive
 static int IsOutermostCylinder(DRIVE_PARAMS *drive_params, int cyl)
 {
-	return cyl == drive_params->num_cyl - 1;
+   return cyl == drive_params->num_cyl - 1;
 }
 
 // Decode bytes into header or sector data for the various formats we know about.
@@ -881,9 +881,9 @@ static int IsOutermostCylinder(DRIVE_PARAMS *drive_params, int cyl)
 //      16 bit CRC/ECC code
 //
 //   CONTROLLER_CALLAN
-//	aka "Callan Unistar"
-//	aka "Liberty Bay Multibus model WDC-796-A"
-//	Added by tjt 5-26-2022
+//   aka "Callan Unistar"
+//   aka "Liberty Bay Multibus model WDC-796-A"
+//   Added by tjt 5-26-2022
 //      byte 0 0xa1
 //      byte 1 0xfe
 //      byte 2 low 8 bits of cylinder
@@ -2404,7 +2404,7 @@ SECTOR_DECODE_STATUS wd_process_data(STATE_TYPE *state, uint8_t bytes[],
                sector_status.cyl, sector_status.head, sector_status.sector);
       }
 
-      mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
+      dc_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
             seek_difference, &sector_status, drive_params, sector_status_list);
 
       // The 3640 doesn't have a 0xa1 data header, search for its special sync
@@ -3067,7 +3067,7 @@ SECTOR_DECODE_STATUS wd_decode_track(DRIVE_PARAMS *drive_params, int cyl,
 
                         // Don't perform ECC corrections. They can be
                         // false corrections when not actually sector header.
-                        mfm_crc_bytes(drive_params, bytes,
+                        dc_crc_bytes(drive_params, bytes,
                            header_bytes_crc_len, PROCESS_HEADER, &crc,
                            &ecc_span, &init_status, 0);
 

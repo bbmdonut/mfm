@@ -30,36 +30,36 @@ See mfm_read_util_doc.* for how to run the programs.
 All the code I created is released under GPLv3 or later.
 
 Source file organization
-mfm_read.c	Top file for reading MFM disks
-mfm_util.c	Top file for processing existing MFM delta transitions file
+mfm_read.c          Top file for reading MFM disks
+mfm_util.c          Top file for processing existing MFM delta transitions file
 
 For mfm_read
-analyze.c	Try to determine the track format of a disk drive
-deltas_read.c	Routines for transferring deltas from PRU
-drive.c		Routines for controlling the disk drive
-pru_setup.c	Routines for initializing the PRU
-prucode0.p	The assembly program running in the PRU
-cmd.h		The PRU code commands, return status, and various memory
-		location definitions
+analyze.c           Try to determine the track format of a disk drive
+deltas_read.c       Routines for transferring deltas from PRU
+drive.c             Routines for controlling the disk drive
+pru_setup.c         Routines for initializing the PRU
+prucode0.p          The assembly program running in the PRU
+cmd.h               The PRU code commands, return status, and various memory
+                    location definitions
 
 Used by both
-crc_ecc.c	Routines for performing CRC and ECC operations
-mfm_decoder.c	Routines for performing the MFM decoding
-rll_decoder.c	Routines for performing common RLL functions
-msg.c		Routines for printing messages
-parse_cmdline.c	Routines for parsing and printing the command line options
-wd_mfm_decoder.c	Routines for processing "Western Digital" MFM formats
-wd_rll_decoder.c	Routines for processing "Western Digital" RLL formats
-xebec_mfm_decoder.c	Routines for processing Xebec format tracks
-emu_tran_file.c Routines for reading and writing emulation and transition files
-mfm_decoder.h	Defines for data structures used by the code
-Makefile	Makefile for building the two executables and PRU code
-<other>.h	Various header files which define function prototypes
+crc_ecc.c           Routines for performing CRC and ECC operations
+mfm_decoder.c       Routines for performing the MFM decoding
+rll_decoder.c       Routines for performing common RLL functions
+msg.c               Routines for printing messages
+parse_cmdline.c     Routines for parsing and printing the command line options
+wd_mfm_decoder.c    Routines for processing "Western Digital" MFM formats
+wd_rll_decoder.c    Routines for processing "Western Digital" RLL formats
+xebec_mfm_decoder.c Routines for processing Xebec format tracks
+emu_tran_file.c     Routines for reading and writing emulation and transition files
+mfm_decoder.h       Defines for data structures used by the code
+Makefile            Makefile for building the two executables and PRU code
+<other>.h           Various header files which define function prototypes
 
 Other files
-crc_reverse.c	Routines to be manually used for determining CRC data for a disk
-setup_mfm_read  Script to configure the beaglebone pins
-mfm_read-00A0.dts Device tree file to configure pins
+crc_reverse.c       Routines to be manually used for determining CRC data for a disk
+setup_mfm_read      Script to configure the beaglebone pins
+mfm_read-00A0.dts   Device tree file to configure pins
 
 The DRIVE_PARAMS structure in mfm_decoder.h defines most of the information
 for decoding the track. It can either be set from the command line or by

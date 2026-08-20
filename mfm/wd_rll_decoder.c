@@ -221,7 +221,7 @@ SECTOR_DECODE_STATUS wd_process_rll_data(STATE_TYPE *state, uint8_t bytes[],
                sector_status.cyl, sector_status.head, sector_status.sector);
       }
 
-      rll_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
+      dc_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
             seek_difference, &sector_status, drive_params, sector_status_list);
 
       *state = MARK_DATA;
@@ -413,7 +413,7 @@ SECTOR_DECODE_STATUS wd_decode_rll_track(DRIVE_PARAMS *drive_params, int cyl,
          // the clock. Don't update PLL if this is a long burst without
          // transitions
          if (remaining_delta == 0) {
-            avg_bit_sep_time = nominal_bit_sep_time + filter(clock_time, &filter_state);
+            avg_bit_sep_time = nominal_bit_sep_time + dc_filter(clock_time, &filter_state);
          }
          // Shift based on number of bit times, then put in the 1 from the
          // delta. If we had a delta greater than the size of raw word we
@@ -494,7 +494,7 @@ SECTOR_DECODE_STATUS wd_decode_rll_track(DRIVE_PARAMS *drive_params, int cyl,
                   bytes_crc_len = header_bytes_crc_len;
                   bytes_needed = header_bytes_needed;
 
-                  test_status = rll_crc_bytes(drive_params, bytes, header_bytes_crc_len, PROCESS_HEADER, &crc, &ecc_span, &init_status, 0);
+                  test_status = dc_crc_bytes(drive_params, bytes, header_bytes_crc_len, PROCESS_HEADER, &crc, &ecc_span, &init_status, 0);
                   if ((crc == 0) && !(init_status & SECT_AMBIGUOUS_CRC) && (drive_params->header_crc.poly != 0))
                   {
                      all_sector_status |= rll_process_bytes(drive_params, bytes,

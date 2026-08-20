@@ -844,7 +844,7 @@ DEF_EXTERN TRK_L trk_tektronix_6130[]
               {0, FIELD_HEAD, 0x00, OP_XOR, 4,
                  (BIT_L []) {
                     { 33, 1},
-                    { -2, 3},	// -2 says discard these bits
+                    { -2, 3},  // -2 says discard these bits
                     { -1, -1},
                  }
               },
@@ -2462,7 +2462,7 @@ DEF_EXTERN TRK_L trk_att_3b2[]
               {-1, 0, 0, 0, 0, NULL}
           },
         },
-	{3, TRK_FILL, 0x4e, NULL},    // ID PAD
+  {3, TRK_FILL, 0x4e, NULL},    // ID PAD
         {13, TRK_FILL, 0x00, NULL},   // PLO SYNC (GPL 2)
         {516, TRK_FIELD, 0x00,
            (FIELD_L []) {
@@ -2509,7 +2509,7 @@ DEF_EXTERN TRK_L trk_att_3b2_17sector[]
               {-1, 0, 0, 0, 0, NULL}
           },
         },
-	{3, TRK_FILL, 0x4e, NULL},    // ID PAD
+  {3, TRK_FILL, 0x4e, NULL},    // ID PAD
         {13, TRK_FILL, 0x00, NULL},   // PLO SYNC (GPL 2)
         {516, TRK_FIELD, 0x00,
            (FIELD_L []) {

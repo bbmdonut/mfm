@@ -609,7 +609,7 @@ void parse_cmdline(int argc, char *argv[], DRIVE_PARAMS *drive_params,
             drive_params->head_3bit = 1;
             break;
          case 'f':
-	      {
+         {
             int controller = parse_controller(optarg,
                 ignore_invalid_options, drive_params, &params_set, track_layout_format_only);
             if (controller != -1) {

@@ -34,7 +34,7 @@
 
    The disk was read with David Gesswein's MFM Emulator:
 
-	http://www.pdp8online.com/mfm/mfm.shtml
+   http://www.pdp8online.com/mfm/mfm.shtml
 
    And saved as raw flux-transitions in a "transitions file.
 

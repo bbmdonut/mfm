@@ -151,28 +151,28 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
       }
 
       if (drive_params->controller == CONTROLLER_NORTHSTAR_ADVANTAGE) {
-	 sector_status.cyl = bytes[1] | (((int) bytes[0] & 0xf0) << 4);
-	 sector_status.head = mfm_fix_head(drive_params, exp_head, bytes[2] & 0xf);
-	 sector_status.sector = bytes[0] & 0xf;
-	 // Don't know how/if these are encoded in header
-	 sector_size = drive_params->sector_size;
-	 bad_block = 0;
-	 msg(MSG_DEBUG,
-	    "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
-	       exp_cyl, exp_head, sector_status.cyl, sector_status.head,
-	       sector_status.sector, sector_size, bad_block);
+         sector_status.cyl = bytes[1] | (((int) bytes[0] & 0xf0) << 4);
+         sector_status.head = mfm_fix_head(drive_params, exp_head, bytes[2] & 0xf);
+         sector_status.sector = bytes[0] & 0xf;
+         // Don't know how/if these are encoded in header
+         sector_size = drive_params->sector_size;
+         bad_block = 0;
+         msg(MSG_DEBUG,
+            "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
+               exp_cyl, exp_head, sector_status.cyl, sector_status.head,
+               sector_status.sector, sector_size, bad_block);
 
-	 mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
-	       seek_difference, &sector_status, drive_params, sector_status_list);
+         dc_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
+               seek_difference, &sector_status, drive_params, sector_status_list);
 
-	 *state = DATA_SYNC;
+         *state = DATA_SYNC;
       } else if (drive_params->controller == CONTROLLER_SUPERBRAIN) {
-	 sector_status.cyl = bytes[1];
-	 sector_status.head = mfm_fix_head(drive_params, exp_head, bytes[2]);
-	 sector_status.sector = bytes[3];
-	 // Don't know how/if these are encoded in header
-	 sector_size = drive_params->sector_size;
-	 bad_block = 0;
+         sector_status.cyl = bytes[1];
+         sector_status.head = mfm_fix_head(drive_params, exp_head, bytes[2]);
+         sector_status.sector = bytes[3];
+         // Don't know how/if these are encoded in header
+         sector_size = drive_params->sector_size;
+         bad_block = 0;
 
          if (bytes[0] != 0xfe) {
             msg(MSG_INFO, "Invalid header id byte %02x on cyl %d head %d sector %d\n",
@@ -181,19 +181,19 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
          }
 
 
-	 msg(MSG_DEBUG,
-	    "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
-	       exp_cyl, exp_head, sector_status.cyl, sector_status.head,
-	       sector_status.sector, sector_size, bad_block);
+         msg(MSG_DEBUG,
+            "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
+               exp_cyl, exp_head, sector_status.cyl, sector_status.head,
+               sector_status.sector, sector_size, bad_block);
 
-	 mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
-	       seek_difference, &sector_status, drive_params, sector_status_list);
+         dc_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
+               seek_difference, &sector_status, drive_params, sector_status_list);
 
-	 *state = DATA_SYNC2;
+         *state = DATA_SYNC2;
       } else if (drive_params->controller == CONTROLLER_ND100_3041) {
-	 sector_status.cyl = (bytes[2] << 3) | (bytes[3] >> 5);
-	 sector_status.head = mfm_fix_head(drive_params, exp_head, bytes[1] & 0xf);
-	 sector_status.sector = bytes[3] & 0x1f;
+         sector_status.cyl = (bytes[2] << 3) | (bytes[3] >> 5);
+         sector_status.head = mfm_fix_head(drive_params, exp_head, bytes[1] & 0xf);
+         sector_status.sector = bytes[3] & 0x1f;
          int spare = bytes[1] & 0xf0;
          if (!(spare == 0 || spare == 0x10)) {
             msg(MSG_INFO, "Spare flag %02x on cyl %d head %d sector %d\n",
@@ -205,10 +205,10 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
             alt_assigned = 1;
          }
 
-	 // Not encoded in header
-	 sector_size = drive_params->sector_size;
+         // Not encoded in header
+         sector_size = drive_params->sector_size;
 
-	 bad_block = 0;
+         bad_block = 0;
 
          if (bytes[0] != 0x0) {
             msg(MSG_INFO, "Invalid header id byte %02x on cyl %d head %d sector %d\n",
@@ -221,17 +221,17 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
          // CRC. Reject if all zero data and head or cylinder is non zero
          if ((exp_cyl != 0 || exp_head != 0) && bytes[1] == 0 && bytes[2] == 0
               && bytes[3] == 0) {
-	    *state = HEADER_SYNC;
+            *state = HEADER_SYNC;
          } else {
-	    msg(MSG_DEBUG,
-	       "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
-	          exp_cyl, exp_head, sector_status.cyl, sector_status.head,
-	          sector_status.sector, sector_size, bad_block);
+            msg(MSG_DEBUG,
+               "Got exp %d,%d cyl %d head %d sector %d size %d bad block %d\n",
+                  exp_cyl, exp_head, sector_status.cyl, sector_status.head,
+                  sector_status.sector, sector_size, bad_block);
 
-	    mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
-	       seek_difference, &sector_status, drive_params, sector_status_list);
+            dc_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
+               seek_difference, &sector_status, drive_params, sector_status_list);
 
-	    *state = DATA_SYNC2;
+            *state = DATA_SYNC2;
          }
       }
    } else if (*state == PROCESS_DATA) {
@@ -454,7 +454,7 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
          // the clock. Don't update PLL if this is a long burst without
          // transitions
          if (remaining_delta == 0) {
-            avg_bit_sep_time = nominal_bit_sep_time + filter(clock_time, &filter_state);
+            avg_bit_sep_time = nominal_bit_sep_time + dc_filter(clock_time, &filter_state);
          }
 #if DEBUG
          //printf("track %d clock %f\n", track_time, clock_time);
@@ -579,40 +579,40 @@ SECTOR_DECODE_STATUS northstar_decode_track(DRIVE_PARAMS *drive_params, int cyl,
                }
                //if ((raw_word & 0xfff) == 0xa89 && sync_count > 80) {
                if ((raw_word & 0xf) == 0x9 && sync_count > 80) {
-		  raw_bit_cntr = 2;
-		  found = 1;
+                  raw_bit_cntr = 2;
+                  found = 1;
                }
             } else if (drive_params->controller == CONTROLLER_ND100_3041) {
                if (raw_word == 0x55555555 || raw_word == 0xaaaaaaaa) {
                   sync_count++;
                }
                if ((raw_word & 0xf) == 0x9 && sync_count > 20) {
-		  raw_bit_cntr = 0;
-		  found = 1;
+                  raw_bit_cntr = 0;
+                  found = 1;
                }
             }
             if (found) {
                sync_count = 0;
-	       decoded_word = 0;
-	       decoded_bit_cntr = 0;
-	       state = PROCESS_DATA;
+               decoded_word = 0;
+               decoded_bit_cntr = 0;
+               state = PROCESS_DATA;
    //printf("Start data %d\n",tot_raw_bit_cntr);
-	       mfm_mark_data_location(all_raw_bits_count, 0, tot_raw_bit_cntr);
-	       // Figure out the length of data we should look for
-	       bytes_crc_len = controller_info[drive_params->controller].data_header_bytes +
-		   controller_info[drive_params->controller].data_trailer_bytes +
+               mfm_mark_data_location(all_raw_bits_count, 0, tot_raw_bit_cntr);
+               // Figure out the length of data we should look for
+               bytes_crc_len = controller_info[drive_params->controller].data_header_bytes +
+                  controller_info[drive_params->controller].data_trailer_bytes +
 
-		   drive_params->sector_size +
-		   drive_params->data_crc.length / 8;
-	       bytes_needed = bytes_crc_len;
-	       // Must read enough extra bytes to ensure we send last 32
-	       // bit word to mfm_save_raw_word
-	       bytes_needed += 2;
+                 drive_params->sector_size +
+                 drive_params->data_crc.length / 8;
+              bytes_needed = bytes_crc_len;
+              // Must read enough extra bytes to ensure we send last 32
+              // bit word to mfm_save_raw_word
+              bytes_needed += 2;
 
-	       if (bytes_needed >= sizeof(bytes)) {
-		  printf("Too many bytes needed %d\n",bytes_needed);
-		  exit(1);
-	       }
+              if (bytes_needed >= sizeof(bytes)) {
+                printf("Too many bytes needed %d\n",bytes_needed);
+                exit(1);
+              }
                byte_cntr = 0;
             }
 

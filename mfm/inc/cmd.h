@@ -31,7 +31,7 @@
 // These are the control parameters to communicate with the PRU code
 #define PRU_DDR_ADDR      0x00      // Physical address of shared DDR memory
 #define PRU_DDR_SIZE      0x04      // Size of shared DDR memory
-#define PRU0_WRITE_PTR    0x08	    // Delta write pointer
+#define PRU0_WRITE_PTR    0x08      // Delta write pointer
 #define PRU0_CMD          0x0c      // Command location
 #define PRU0_CMD_DATA     0x10      // Data for command
 #define PRU0_STATUS       0x14      // Drive status, only valid when idle

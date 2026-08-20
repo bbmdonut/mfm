@@ -227,17 +227,17 @@ START:
 
     ADD   EDMA_PARAM_BASE, EDMA_PARAM_BASE, 32     // Go to next entry
 
-    // Second entry OPT TCC = channel, enable transfer complete interrupt
-    // SRC will be set later
-    // ACNT = DMA_SIZE, BCNT = 1,
-    // DST = buffer 2
-    // SRC, DST BIDX = 0
-    // LINK = next PaRAM set, BCNTRLD = 0
-    // CCNT = 1
+      // Second entry OPT TCC = channel, enable transfer complete interrupt
+      // SRC will be set later
+      // ACNT = DMA_SIZE, BCNT = 1,
+      // DST = buffer 2
+      // SRC, DST BIDX = 0
+      // LINK = next PaRAM set, BCNTRLD = 0
+      // CCNT = 1
     LSL   r0, EDMA_CHANNEL, 12
-    OR    r0.w2, r0.w2, 0x10		//TCINTEN and TCC = PruDmaChannel
+    OR    r0.w2, r0.w2, 0x10 //TCINTEN and TCC = PruDmaChannel
     SBBO  r0, EDMA_PARAM_BASE, OPT, 4
-       // This will be updated when submitted
+      // This will be updated when submitted
     SBBO  DDR_ADDR, EDMA_PARAM_BASE,  SRC, 4
     MOV   r0, DMA_SIZE
     SBBO  r0, EDMA_PARAM_BASE, A_B_CNT, 2

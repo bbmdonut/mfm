@@ -192,7 +192,7 @@ SECTOR_DECODE_STATUS tagged_process_data(STATE_TYPE *state, uint8_t bytes[],
          exit(1);
       }
 
-      mfm_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
+      dc_check_header_values(exp_cyl, exp_head, sector_index, sector_size,
             seek_difference, &sector_status, drive_params, sector_status_list);
 
       msg(MSG_DEBUG,
@@ -387,7 +387,7 @@ SECTOR_DECODE_STATUS tagged_decode_track(DRIVE_PARAMS *drive_params, int cyl,
          // the clock. Don't update PLL if this is a long burst without
          // transitions
          if (remaining_delta == 0) {
-            avg_bit_sep_time = nominal_bit_sep_time + filter(clock_time, &filter_state);
+            avg_bit_sep_time = nominal_bit_sep_time + dc_filter(clock_time, &filter_state);
          }
 #if 0
          if (cyl == 819 && head == 0) {

@@ -47,8 +47,6 @@
 #include "Arduino.h"
 #include "TC78H670FTG.h"
 
-typedef uint32_t SECTOR_DECODE_STATUS;
-
 #define SECTOR_GOOD_BAD 0x80
 #define SECTOR_GOOD_GOOD 0x0
 #define SECTOR_GOOD_ECC_MASK 0x7f
@@ -108,6 +106,10 @@ typedef uint32_t SECTOR_DECODE_STATUS;
 #define SECT_NO_STATUS      0x00
 #define UNRECOVERED_ERROR(x) ((x & (SECT_BAD_HEADER | SECT_BAD_DATA)) && !(x & SECT_SPARE_BAD))
 
+#define CONTROLLER_TI_2223220 9999
+
+typedef uint32_t SECTOR_DECODE_STATUS;
+
 // These are various statistics from reading the drive that are used to
 // print a summary when finished.
 typedef struct {
@@ -131,6 +133,7 @@ typedef struct {
 typedef char MARK_BAD_INFO[MAX_CYL][MAX_HEAD][MAX_SECTORS];
 
 typedef struct alt_struct ALT_INFO;
+
 struct alt_struct {
    ALT_INFO *next;
    int bad_offset;
@@ -284,8 +287,6 @@ typedef struct {
       CONTROLLER_IMS_A820,
       CONTROLLER_WD_1006_RLL
    } controller;
-
-#define CONTROLLER_TI_2223220 9999
 
    // The sector numbering used. This will vary from the physical order if
    // interleave is used. Only handles all sectors the same.
@@ -716,7 +717,7 @@ DEF_EXTERN CONTROLLER controller_info[]
          5, 2, 0, 0, CHECK_CRC, CHECK_CRC,
          0, 1, trk_ISBC214_512B, 512, 17, 1, 5209,
          0, 0,
-         {0xffff,0x1021,16,0},{0xffffffff,0x140a0445,32,6}, CONT_MODEL,
+         {0xffff,0x1021,16,0},{0xffffffff,0x140a0445,32,6}, CONT_MODEL, // THIS NEEDS TO GO BACK TO 0xffffffff!
          0, 0, 0, 0
       },      
       // TODO: Analyze currently can't separate this from Intel_iSBC_214_512B
@@ -926,7 +927,7 @@ DEF_EXTERN CONTROLLER controller_info[]
          5, 2, 0, 0, CHECK_CRC, CHECK_CRC,
          0, 1, NULL, 512, 17, 0, 5209,
          0, 0,
-	 {0xffff,0x1021,16,0},{0xffffffff,0x140a0445,32,6}, CONT_MODEL,
+         {0xffff,0x1021,16,0},{0xffffffff,0x140a0445,32,6}, CONT_MODEL,
          0, 0, 0, 0, 0
       },
       {"IBM_5288",            256, 10000000,      0,
@@ -1565,39 +1566,6 @@ DEF_EXTERN CONTROLLER controller_info[]
 #endif
 ;
 
-// Define states for processing the data. MARK_ID is looking for the 0xa1 byte
-// before a header and MARK_DATA is same for the data portion of the sector.
-// MARK_DATA1 is looking for special Symbolics 3640 mark code.
-// MARK_DATA2 is looking for special ROHM PBX mark code.
-// DATA_SYNC2 is looking for SUPERBRAIN
-// PROCESS_HEADER is processing the header bytes and PROCESS_DATA processing
-// the data bytes. HEADER_SYNC and DATA_SYNC are looking for the one bit to sync to
-// in CONTROLLER_XEBEC_104786. Not all decoders use all states.
-typedef enum { MARK_ID, MARK_DATA, MARK_DATA1, MARK_DATA2, HEADER_SYNC, HEADER_SYNC2, DATA_SYNC, DATA_SYNC2, PROCESS_HEADER, PROCESS_HEADER2, PROCESS_DATA
-} STATE_TYPE;
-
-int cmpint(const void *i1, const void *i2);
-float filter(float v, float *delay);
-
-// Hold for sector status and cylinder and head it was for. We save the
-// data so when the cylinder and head changes we can print the final status.
-// The same track may be reread.
-extern SECTOR_STATUS last_sector_list[MAX_SECTORS];
-extern int last_cyl;
-extern int last_head;
-
-// Last LBA address processed for detecting bad sectors
-extern int last_lba_addr;
-
-extern CONTROLLER controller_info[];
-
-void update_stats(DRIVE_PARAMS *drive_params, int cyl, int head,
-      SECTOR_STATUS sector_status_list[]);
-
-void update_emu_track_words(DRIVE_PARAMS * drive_params,
-      SECTOR_STATUS sector_status_list[], int write_track, int new_track,
-      int cyl, int head);
-
 // Best_track is the best track read as one read. Best_fixed_track is
 // the best track by putting together multiple reads
 extern uint32_t best_track_words[MAX_TRACK_WORDS];
@@ -1615,7 +1583,49 @@ extern uint8_t sector_good[MAX_CYL][MAX_HEAD][MAX_SECTORS];
 
 extern uint64_t sector_crc[MAX_CYL][MAX_HEAD][MAX_SECTORS];
 
-void print_status_flags(SECTOR_DECODE_STATUS status);
+// Define states for processing the data. MARK_ID is looking for the 0xa1 byte
+// before a header and MARK_DATA is same for the data portion of the sector.
+// MARK_DATA1 is looking for special Symbolics 3640 mark code.
+// MARK_DATA2 is looking for special ROHM PBX mark code.
+// DATA_SYNC2 is looking for SUPERBRAIN
+// PROCESS_HEADER is processing the header bytes and PROCESS_DATA processing
+// the data bytes. HEADER_SYNC and DATA_SYNC are looking for the one bit to sync to
+// in CONTROLLER_XEBEC_104786. Not all decoders use all states.
+typedef enum { MARK_ID, MARK_DATA, MARK_DATA1, MARK_DATA2, HEADER_SYNC, HEADER_SYNC2, DATA_SYNC, DATA_SYNC2, PROCESS_HEADER, PROCESS_HEADER2, PROCESS_DATA
+} STATE_TYPE;
+
+int dc_cmpint(const void *i1, const void *i2);
+float dc_filter(float v, float *delay);
+
+// Hold for sector status and cylinder and head it was for. We save the
+// data so when the cylinder and head changes we can print the final status.
+// The same track may be reread.
+extern SECTOR_STATUS last_sector_list[MAX_SECTORS];
+extern int last_cyl;
+extern int last_head;
+
+// Last LBA address processed for detecting bad sectors
+extern int last_lba_addr;
+
+extern CONTROLLER controller_info[];
+
+void dc_update_stats(DRIVE_PARAMS *drive_params, int cyl, int head,
+      SECTOR_STATUS sector_status_list[]);
+
+void dc_update_emu_track_words(DRIVE_PARAMS * drive_params,
+      SECTOR_STATUS sector_status_list[], int write_track, int new_track,
+      int cyl, int head);
+
+void dc_print_status_flags(SECTOR_DECODE_STATUS status);
+
+SECTOR_DECODE_STATUS dc_crc_bytes(DRIVE_PARAMS *drive_params,
+   uint8_t bytes[], int bytes_crc_len, int state, uint64_t *crc_ret,
+   int *ecc_span, SECTOR_DECODE_STATUS *init_status, int perform_ecc);
+
+void dc_check_header_values(int exp_cyl, int exp_head,
+      int *sector_index, int sector_size, int *seek_difference,
+      SECTOR_STATUS *sector_status, DRIVE_PARAMS *drive_params,
+      SECTOR_STATUS sector_status_list[]);
 
 // #undef DEF_EXTERN
 #endif // DECODER_COMMON_H_

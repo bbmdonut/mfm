@@ -333,10 +333,10 @@ void drive_setup(DRIVE_PARAMS *drive_params)
    // Returning to track 0 can be problematic when using
    // external stepping control. Bypass the return in this case.
    if (!drive_params->ext_stepper) {
-	   if (!drive_at_track0()) {
-	      msg(MSG_INFO, "Returning to track 0\n");
-	      drive_seek_track0();
-	   }
+      if (!drive_at_track0()) {
+         msg(MSG_INFO, "Returning to track 0\n");
+         drive_seek_track0();
+      }
    }
 }
 
