@@ -311,7 +311,7 @@ SECTOR_DECODE_STATUS northstar_process_data(STATE_TYPE *state, uint8_t bytes[],
 
 
       if (!(sector_status.status & SECT_BAD_HEADER)) {
-         if (mfm_write_sector(&bytes[0], drive_params, &sector_status,
+         if (dc_write_sector(&bytes[0], drive_params, &sector_status,
                sector_status_list, &bytes[0], total_bytes) == -1) {
             sector_status.status |= SECT_BAD_HEADER;
          }

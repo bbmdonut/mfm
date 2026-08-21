@@ -1627,5 +1627,9 @@ void dc_check_header_values(int exp_cyl, int exp_head,
       SECTOR_STATUS *sector_status, DRIVE_PARAMS *drive_params,
       SECTOR_STATUS sector_status_list[]);
 
+int dc_write_sector(uint8_t bytes[], DRIVE_PARAMS * drive_params,
+      SECTOR_STATUS *sector_status, SECTOR_STATUS sector_status_list[],
+      uint8_t all_bytes[], int all_bytes_len);
+
 // #undef DEF_EXTERN
 #endif // DECODER_COMMON_H_

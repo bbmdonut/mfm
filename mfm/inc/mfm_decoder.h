@@ -189,9 +189,6 @@ SECTOR_DECODE_STATUS perq_decode_track(DRIVE_PARAMS *drive_parms, int cyl,
 
 void mfm_decode_setup(DRIVE_PARAMS *drive_params, int write);
 void mfm_decode_done(DRIVE_PARAMS *drive_params);
-int mfm_write_sector(uint8_t bytes[], DRIVE_PARAMS *drive_params,
-   SECTOR_STATUS *sector_status, SECTOR_STATUS bad_sector_list[],
-   uint8_t all_bytes[], int all_bytes_len);
 int mfm_write_metadata(uint8_t bytes[], DRIVE_PARAMS *drive_params,
    SECTOR_STATUS *sector_status);
 void init_sector_status_list(SECTOR_STATUS *sector_status_list, int num_sectors);
@@ -264,5 +261,9 @@ void mfm_clear_remap_list(void);
 void mfm_remap_track_sectors(unsigned int from_sector, unsigned int to_sector);
 void mfm_remap_track(DRIVE_PARAMS *drive_params,
    unsigned int cyl, unsigned int head);
+void mfm_update_emu_track_sector(DRIVE_PARAMS *drive_params, SECTOR_STATUS
+   *sector_status, int sect_rel0, uint8_t bytes[], int num_bytes,
+   int update);
+
 
 #endif /* MFM_DECODER_H_ */

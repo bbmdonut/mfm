@@ -186,7 +186,7 @@
 
 #define ARRAYSIZE(x)  (sizeof(x) / sizeof(x[0]))
 
-static void update_emu_track_sector(DRIVE_PARAMS *drive_params,
+void mfm_update_emu_track_sector(DRIVE_PARAMS *drive_params,
        SECTOR_STATUS *sector_status, int sect_rel0,
       uint8_t bytes[], int num_bytes, int update);
 void update_emu_track_words(DRIVE_PARAMS * drive_params,
@@ -719,179 +719,6 @@ static void dump_bad(void) {
       ecc_sector_count);
 }
 
-// Write the sector data to file. We only write the best data so if the
-// caller retries read with error we won't overwrite good data if this
-// read has an error for this sector but the previous didn't.
-// Bytes is data to write.
-// drive_params: specifies the length and other information.
-// sector_status: is the status of the sector writing
-// sector_status_list: is the status of the data that would be written to the
-//    file. Status is still updated if drive_params->ext_fd is -1 to prevent
-//    writing.
-// all_bytes: Includes data header bytes, used for emulator file writing
-// all_bytes_len: Length of all_bytes
-// return: -1 if error found, 0 if OK.
-int mfm_write_sector(uint8_t bytes[], DRIVE_PARAMS * drive_params,
-      SECTOR_STATUS *sector_status, SECTOR_STATUS sector_status_list[],
-      uint8_t all_bytes[], int all_bytes_len)
-{
-   int rc;
-   STATS *stats = &drive_params->stats;
-   int update;
-   off_t offset;
-
-   if (sector_status->ignore) {
-      return 0;
-   }
-
-   // Some disks number sectors starting from 1. We need them starting
-   // from 0.
-   int sect_rel0 = sector_status->sector - drive_params->first_sector_number;
-
-   // Collect statistics
-   stats->max_sect = MAX(sector_status->sector, stats->max_sect);
-   stats->min_sect = MIN(sector_status->sector, stats->min_sect);
-   stats->max_head = MAX(sector_status->head, stats->max_head);
-   stats->min_head = MIN(sector_status->head, stats->min_head);
-   stats->max_cyl = MAX(sector_status->cyl, stats->max_cyl);
-   stats->min_cyl = MIN(sector_status->cyl, stats->min_cyl);
-
-   // Check for sector and head in range to prevent bad writes.
-   // We don't check cyl against max since if it exceeds it things
-   // will still work properly.
-   if (sect_rel0 >= drive_params->num_sectors || sect_rel0 < 0) {
-      msg(MSG_ERR_SERIOUS, "Logical sector %d out of range 0-%d sector %d cyl %d head %d\n",
-            sect_rel0, drive_params->num_sectors-1, sector_status->sector,
-            sector_status->cyl,sector_status->head);
-      return -1;
-   }
-   if (sector_status->head > drive_params->num_head) {
-      msg(MSG_ERR_SERIOUS,"Head out of range %d max %d cyl %d sector %d\n",
-            sector_status->head, drive_params->num_head,
-            sector_status->cyl, sector_status->sector);
-      return -1;
-   }
-
-   sector_status_list[sect_rel0].last_status = sector_status->status;
-   // If not written then write data. Otherwise only write if likely to be
-   // better than sector previously written. Better is if we didn't get a CRC
-   // error, or the ECC correction span is less than the last one.
-   // We assume the header data is correct so we don't check if the header
-   // ECC correction is better. If the header wasn't right we wrote the
-   // data to the wrong spot in the file.
-   update = 0;
-   // If the previous header was bad update
-   if (sector_status_list[sect_rel0].status & SECT_BAD_HEADER) {
-      update = 1;
-   }
-   // If we haven't written the sector yet write it even if bad
-   if (sector_status_list[sect_rel0].status & SECT_NOT_WRITTEN) {
-      sector_status_list[sect_rel0].status &= ~SECT_NOT_WRITTEN;
-      update = 1;
-   }
-   // If current read isn't bad
-   if ( !(sector_status->status & SECT_BAD_DATA)) {
-      // If last was bad then update
-      if (sector_status_list[sect_rel0].status & SECT_BAD_DATA) {
-         update = 1;
-      }
-      // If previous had ECC correction and current correction is less then update
-      if ((sector_status_list[sect_rel0].ecc_span_corrected_data > 0 &&
-             (sector_status->ecc_span_corrected_data == 0 ||
-             sector_status->ecc_span_corrected_data <
-             sector_status_list[sect_rel0].ecc_span_corrected_data)) ||
-           (drive_params->ignore_seek_errors &&
-             sector_status->cyl != sector_status_list[sect_rel0].cyl )) {
-         update = 1;
-      }
-   }
-   // If LBA number bad don't update
-   if (sector_status->status & SECT_BAD_LBA_NUMBER) {
-      // Update status that would normally be updated when sector written
-      sector_status_list[sect_rel0] = *sector_status;
-      update = 0;
-   }
-   // Always update errors in emu data in case it ends up being used as
-   // the best data to write
-   update_emu_track_sector(drive_params, sector_status, sect_rel0,
-      all_bytes, all_bytes_len, update);
-
-   // Only write best sector when in ignore_seek_error mode. Since can get
-   // same sector from reads that are supposed to be from different cylinders
-   // the normal check can't determine which is best.
-   if (update && (drive_params->ignore_seek_errors)) {
-      CRC_INFO crc_info = {0x12345678, 0x140a0445000101ll, 56, 0};
-
-      uint64_t crc = crc64(bytes, drive_params->sector_size, &crc_info);
-      // If good read or previous good read see if data different. Good is CRC
-      // matches with or without ECC correction
-      if (!(sector_status->status & SECT_BAD_DATA)) {
-         if (sector_good[sector_status->cyl][sector_status->head][sect_rel0] != SECTOR_GOOD_BAD) {
-            if (crc != sector_crc[sector_status->cyl][sector_status->head][sect_rel0]) {
-               // If neither current read or previous were corrected by ECC
-               if (sector_status->ecc_span_corrected_data == 0 &&
-                   (sector_good[sector_status->cyl][sector_status->head][sect_rel0] & SECTOR_GOOD_ECC_MASK) == 0) {
-                  msg(MSG_INFO, "Found two reads of sector with different content cyl %d head %d sect %d\n",sector_status->cyl,
-                      sector_status->head,sect_rel0);
-                  // Keep first. Found disk with old format data at end. This
-                  // will report these sectors as bad since they won't
-                  // be written which updates the sector status list
-                  update = 0;
-               } else {
-                  msg(MSG_INFO, "Miscorrected ECC cyl %d head %d sect %d\n",sector_status->cyl,
-                     sector_status->head,sect_rel0);
-               }
-            }
-         }
-         // Update CRC so we can see if we are getting false ECC corrections
-         sector_crc[sector_status->cyl][sector_status->head][sect_rel0] = crc;
-      }
-      // ECC correction, Span is only set if we don't have CRC error after correction
-      uint8_t new_good;
-      if (sector_status->status & SECT_BAD_DATA) {
-         new_good = SECTOR_GOOD_BAD;
-      } else if (sector_status->ecc_span_corrected_data > 0) {
-         new_good = sector_status->ecc_span_corrected_data;
-      } else {
-         new_good = SECTOR_GOOD_GOOD;
-      }
-      // Need to replace same at least once to write data with CRC error.
-      if (sector_good[sector_status->cyl][sector_status->head][sect_rel0] < new_good) {
-         //printf("Not replacing better sector %d %d\n",sector_good[sector_status->cyl][sector_status->head][sect_rel0], new_good);
-         update = 0;
-      } else {
-         sector_good[sector_status->cyl][sector_status->head][sect_rel0] = new_good;
-      }
-   }
-   if (update) {
-      if (drive_params->ext_fd >= 0) {
-         if (sector_status->is_lba) {
-            offset = (off_t) sector_status->lba_addr * drive_params->sector_size;
-         } else {
-            offset = (sect_rel0) * drive_params->sector_size +
-               sector_status->head * (drive_params->sector_size *
-                     drive_params->num_sectors) +
-                     (off_t) sector_status->cyl * (drive_params->sector_size *
-                           drive_params->num_sectors *
-                           drive_params->num_head);
-         }
-         if (lseek(drive_params->ext_fd, offset, SEEK_SET) < 0) {
-            msg(MSG_FATAL, "Seek failed decoded data: %s\n", strerror(errno));
-            exit(1);
-         };
-         if ((rc = write(drive_params->ext_fd, bytes, drive_params->sector_size)) !=
-               drive_params->sector_size) {
-            msg(MSG_FATAL, "Write failed, rc %d: %s", rc, strerror(errno));
-            exit(1);
-         }
-      }
-      sector_status_list[sect_rel0] = *sector_status;
-   }
-   sector_status_list[sect_rel0].last_status = sector_status->status;
-
-   return 0;
-}
-
 // Write the sector metadata to file. We will write the last sector read
 // data. TODO: Should we do the keep the best logic?
 // drive_params: specifies the length and other information.
@@ -1299,7 +1126,7 @@ void mfm_mark_end_data(int bit_count, DRIVE_PARAMS *drive_params, int cyl, int h
 // If we fixed an ECC error we try to put the fixed data bits back into the
 // sector. Header is not fixed if it has an ECC correction. We copy the
 // track words into the best track in the area for that sector.
-static void update_emu_track_sector(DRIVE_PARAMS *drive_params, SECTOR_STATUS
+void mfm_update_emu_track_sector(DRIVE_PARAMS *drive_params, SECTOR_STATUS
       *sector_status, int sect_rel0, uint8_t bytes[], int num_bytes,
      int update) {
    int i, bit;

@@ -363,7 +363,7 @@ SECTOR_DECODE_STATUS xebec_process_data(STATE_TYPE *state, uint8_t bytes[],
       }
       sector_status.ecc_span_corrected_data = ecc_span;
       if (!(sector_status.status & SECT_BAD_HEADER)) {
-         if (mfm_write_sector(&bytes[2], drive_params, &sector_status,
+         if (dc_write_sector(&bytes[2], drive_params, &sector_status,
                sector_status_list, &bytes[0], total_bytes) == -1) {
             sector_status.status |= SECT_BAD_HEADER;
          }

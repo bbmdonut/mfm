@@ -2653,7 +2653,7 @@ SECTOR_DECODE_STATUS wd_process_data(STATE_TYPE *state, uint8_t bytes[],
 
          // Bytes[1] is because 0xa1 can't be updated from bytes since
          // won't get encoded as special sync pattern
-         if (mfm_write_sector(&bytes[dheader_bytes], drive_params, &sector_status,
+         if (dc_write_sector(&bytes[dheader_bytes], drive_params, &sector_status,
                sector_status_list, &bytes[1], total_bytes-1) == -1) {
             sector_status.status |= SECT_BAD_HEADER;
          }

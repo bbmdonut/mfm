@@ -56,8 +56,5 @@ SECTOR_DECODE_STATUS rll_process_bytes(DRIVE_PARAMS *drive_params, uint8_t bytes
       int *seek_difference, SECTOR_STATUS sector_status_list[],
       SECTOR_DECODE_STATUS init_status);
 int rll_fix_head(DRIVE_PARAMS *drive_params, int exp_head, int head);
-int rll_write_sector(uint8_t bytes[], DRIVE_PARAMS * drive_params,
-      SECTOR_STATUS *sector_status, SECTOR_STATUS sector_status_list[],
-      uint8_t all_bytes[], int all_bytes_len);
 
 #endif // RLL_DECODER_H__
