@@ -64,10 +64,6 @@
 
 // This reverses the bit ordering in a byte. The controller writes
 // the header data LSB first not the normal MSB first.
-static unsigned char rev_lookup[16] = {
-   0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe,
-   0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf };
-#define REV_BYTE(n)( (rev_lookup[n&0xf] << 4) | rev_lookup[n>>4])
 
 #define MARK_STORED -999
 
@@ -151,8 +147,6 @@ SECTOR_DECODE_STATUS wd_process_rll_data(STATE_TYPE *state, uint8_t bytes[],
    // or is an alternate track
    static int bad_block, alt_assigned, is_alternate, alt_assigned_handled;
    static SECTOR_STATUS sector_status;
-   // 0 after first sector marked spare/bad found. Only used for Adaptec
-   static int first_spare_bad_sector = 1;
 
    if (*state == PROCESS_HEADER) {
       // Clear these since not used by all formats
@@ -172,7 +166,6 @@ SECTOR_DECODE_STATUS wd_process_rll_data(STATE_TYPE *state, uint8_t bytes[],
          int sector_size_lookup[4] = {256, 512, 1024, 128};
          int cyl_high_lookup[16] = {0,1,2,3,-1,-1,-1,-1,4,5,6,7,-1,-1,-1,-1};
          int cyl_high;
-         static int last_sector_group = 0;
 
          cyl_high = cyl_high_lookup[(bytes[1] & 0xf) ^ 0xe];
          sector_status.cyl = 0;
@@ -334,12 +327,6 @@ SECTOR_DECODE_STATUS wd_decode_rll_track(DRIVE_PARAMS *drive_params, int cyl,
    STATE_TYPE state = MARK_ID;
    // Status of decoding returned
    SECTOR_DECODE_STATUS all_sector_status = SECT_NO_STATUS;
-   // How many zeros we need to see before we will look for the 0xa1 byte.
-   // When write turns on and off can cause codes that look like the 0xa1
-   // so this avoids them. Some drives seem to have small number of
-   // zeros after sector marked bad in header.
-#define MARK_NUM_ZEROS 2
-   int zero_count = 0;
    // Number of deltas available so far to process
    int num_deltas;
    // And number from last time
@@ -363,14 +350,6 @@ SECTOR_DECODE_STATUS wd_decode_rll_track(DRIVE_PARAMS *drive_params, int cyl,
    int byte_cntr = 0;
    // Sequential counter for counting sectors
    int sector_index = 0;
-   // Count all the raw bits for emulation file
-   int all_raw_bits_count = 0;
-   // Bit count of last of header found
-   int header_raw_bit_count = 0;
-   // Bit delta between last header and previous header
-   int header_raw_bit_delta = 0;
-   // First address mark time in ns
-   int first_addr_mark_ns = 0;
    // Decoded bits for one valid RLL pattern
    unsigned int translated_result = 0;
 
@@ -484,7 +463,6 @@ SECTOR_DECODE_STATUS wd_decode_rll_track(DRIVE_PARAMS *drive_params, int cyl,
                   uint64_t crc;
                   int ecc_span;
                   SECTOR_DECODE_STATUS init_status = 0;
-                  SECTOR_DECODE_STATUS test_status = 0;
 
                   // We have the entirety of the header, with CRC value. Test it for validity.
 
@@ -494,7 +472,7 @@ SECTOR_DECODE_STATUS wd_decode_rll_track(DRIVE_PARAMS *drive_params, int cyl,
                   bytes_crc_len = header_bytes_crc_len;
                   bytes_needed = header_bytes_needed;
 
-                  test_status = dc_crc_bytes(drive_params, bytes, header_bytes_crc_len, PROCESS_HEADER, &crc, &ecc_span, &init_status, 0);
+                  dc_crc_bytes(drive_params, bytes, header_bytes_crc_len, PROCESS_HEADER, &crc, &ecc_span, &init_status, 0);
                   if ((crc == 0) && !(init_status & SECT_AMBIGUOUS_CRC) && (drive_params->header_crc.poly != 0))
                   {
                      all_sector_status |= rll_process_bytes(drive_params, bytes,
