@@ -99,6 +99,26 @@ typedef struct {
    uint16_t pattern;
 } SPECIAL_LIST;
 
+// Non zero if the sector number has already been used
+static int *sector_used_list;
+// Size of sector_used_list in bytes
+static int list_size_bytes;
+// Number of sector used in the list
+static int sector_used_count;
+// Sector number to start the next track with
+static int track_start_sector;
+// Interleave to use on a track, sectors incremented by this value
+static int sector_interleave;
+// Increment to sector to use for start sector of each track
+static int track_interleave;
+
+// Current sector
+static int sector;
+// Current physical sector
+static int phys_sector;
+// Current head and cylinder
+static int head, cyl;
+
 void ext2emu(int argc, char *argv[]);
 
 // Main routine
@@ -321,6 +341,15 @@ int main (int argc, char *argv[])
       mfm_end_track(&drive_params, last_cyl, last_head);
    }
    mfm_decode_done(&drive_params);
+
+   // Final cleanup of global allocations
+   printf("main: testing 'sector_used_list'...\n");
+   if (sector_used_list)
+   {
+      printf("main: 'sector_used_list' was still allocated. Calling free()...\n");
+      free(sector_used_list);
+      sector_used_list = NULL;
+   }
    return 0;
 }
 
@@ -341,25 +370,7 @@ uint64_t reverse_bits(uint64_t value, int len_bits) {
 }
 
 
-// Non zero if the sector number has already been used
-static int *sector_used_list;
-// Size of sector_used_list in bytes
-static int list_size_bytes;
-// Number of sector used in the list
-static int sector_used_count;
-// Sector number to start the next track with
-static int track_start_sector;
-// Interleave to use on a track, sectors incremented by this value
-static int sector_interleave;
-// Increment to sector to use for start sector of each track
-static int track_interleave;
 
-// Current sector
-static int sector;
-// Current physical sector
-static int phys_sector;
-// Current head and cylinder
-static int head, cyl;
 
 // Set the current head value
 //
@@ -1210,5 +1221,10 @@ void ext2emu(int argc, char *argv[])
       msg(MSG_INFO, "Not all track filled, %d of %d bytes used\n",
         track_filled, track_length);
    }
+   
    emu_file_close(drive_params.emu_fd, 1);
+
+   SAFE_FREE(sector_used_list)
+   SAFE_FREE(track_mfm)
+   SAFE_FREE(track)
 }

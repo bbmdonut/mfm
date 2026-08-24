@@ -57,6 +57,10 @@
 #define MIN(x,y) (x < y ? x : y)
 #define BIT_MASK(x) (1 << (x))
 
+// If a pointer to previously allocated memory is still active, free it and
+// NULL the pointer (to prevent use-after-free)
+#define SAFE_FREE(ptr) if (ptr) { free(ptr); ptr = NULL; }
+
 // Number of nanoseconds of each PRU clock
 #define CLOCKS_TO_NS 5
 

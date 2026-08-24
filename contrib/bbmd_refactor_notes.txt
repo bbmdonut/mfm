@@ -1,0 +1,115 @@
+Here are my thoughts on a proposed refactor:
+
+* The core functionality remains the same - pull transitions, analyze them,
+  decode them, convert them to emulator-compatible files, etc.
+
+* Under the hood, the handling will become more "modular", and more easily
+  configured via external text files (leaning toward JSON):
+
+  * Core decoding and encoding will be broken out into loadable libraries
+    with a common API (.so/.dll/etc.):
+
+    * FM (not yet implemented, use case to follow)
+    * MFM
+    * RLL (Western Digital to start, but configurable with different
+      manufacturer tables within text files)
+
+  * Controller-specific items will also be broken down into loadable
+    libraries, based on a core controller IC name (WD42C22A instead of
+    WD1006-27X, etc.)
+    
+    * For controller ICs that support multiple capabilities (MFM & RLL), this
+      is mapped in the config files
+
+  * CRC/ECC configurations will also be configurable via external files.
+
+Ultimately, the goal is to cut down on the core logic in the main 
+application(s), and allow for expandability to be easier for the end-user.
+If a user has a new controller card that isn't yet supported, but it uses 
+an existing IC at its core, support in most cases could be added by updating
+the text configuration file(s) without waiting for a new release. Only when
+a new controller IC or encoding format needs to be added would a new code
+release be needed (even then, it could potentially be only a new library
+download and config file updates)
+
+While this architecture is intended first for the reader/decoder/analysis
+tools, this would ultimately expand to the emulator side as well (only
+requiring the loading of the needed items to handle a particular file at
+any given time).
+
+This implementation would also allow for wider development by the community at
+large, by providing libraries which could be used by third-party utilities in
+order to handle compatible data more easily.
+
+The proposed binary layout would look something like this:
+
+/
+    mfm/
+        controllers/
+            wd42c22a.so
+            wd50c12.so
+        encoding/
+            fm.so
+            mfm.so
+            rll2_7.so
+        encoder_config.json
+        controller_config.json
+        mfm_util
+        
+        (other files/utilities)
+
+
+controller_config.json:
+---
+[
+    "controller_name": "wd1006-27x",
+    "configuration": {
+        "controller_ic": "wd50c12",
+        "encoding": "rll2_7_wd",
+        // Any other configuration items we might want to expose to the user,
+        // i.e. config items currently in the hard-coded configurations
+    }
+]
+---
+
+encoder_config.json:
+---
+{
+    "encoding_tables": [
+        {
+            "name": "rll2_7_wd",
+            "conversions":
+            [
+                {
+                    "encoded_value": 4,
+                    "encoded_size": 4
+                    "data_value": 3,
+                    "data_size": 2
+                },
+            ]
+        }
+    ]
+    "encoders": [
+        {
+            "name": "mfm",
+            "library": "mfm",
+            "encoding_table": "mfm"
+        },
+        {
+            "name": "rll2_7_wd",
+            "library": "rll2_7",
+            "encoding_table": "rll2_7_wd"
+        }
+    ]
+}
+
+---
+
+track_layout.json:
+---
+[
+    {
+        "controller_ic": "
+    }
+]
+---
