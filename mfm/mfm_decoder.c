@@ -251,10 +251,11 @@ void mfm_end_track(DRIVE_PARAMS *drive_params, unsigned int cyl,
    if (drive_params->xebec_skew) {
       // Make sure entire track written. If bad header or other errors the
       // sectors won't be written to the file. This will zero fill.
-      ftruncate(drive_params->ext_fd, (cyl * drive_params->num_head + (head+1)) *
-          drive_params->num_sectors * drive_params->sector_size);
-
-      mfm_remap_track(drive_params, cyl, head);
+      if (!ftruncate(drive_params->ext_fd, (cyl * drive_params->num_head + (head+1)) *
+          drive_params->num_sectors * drive_params->sector_size))
+      {
+         mfm_remap_track(drive_params, cyl, head);
+      }
    }
 }
 
@@ -630,9 +631,11 @@ void mfm_decode_done(DRIVE_PARAMS * drive_params)
    // Process last track sector list
    dc_update_stats(drive_params, -1, -1, NULL);
    if (drive_params->ext_fd >= 0) {
-      ftruncate(drive_params->ext_fd, drive_params->num_cyl * drive_params->num_head *
-          drive_params->num_sectors * drive_params->sector_size);
-      fix_ext_alt_tracks(drive_params);
+      if (!ftruncate(drive_params->ext_fd, drive_params->num_cyl * drive_params->num_head *
+          drive_params->num_sectors * drive_params->sector_size))
+      {
+         fix_ext_alt_tracks(drive_params);
+      }
       close(drive_params->ext_fd);
    }
 
