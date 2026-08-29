@@ -463,7 +463,7 @@ static struct option long_options[] = {
          {"external_stepper", 0, NULL, 'X'},
          {NULL, 0, NULL, 0}
 };
-static char short_options[] = "s:h:c:g:d:f:j:l:ui:3r:R:a::q:b:t:e:m:vn:M:w:Ix::S:X";
+static char short_options[] = "s:h:c:g:d:f:j:l:ui:3r:Ra::q:b:t:e:m:vn:M:w:Ix::S:X";
 
 // Main routine for parsing command lines
 //

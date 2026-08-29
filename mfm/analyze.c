@@ -1125,7 +1125,7 @@ static void analyze_disk_size(DRIVE_PARAMS *drive_params, int start_cyl,
 
    for (cyl = start_cyl + 1; cyl < MAX_CYL; cyl++) {
       if (cyl % 5 == 0)
-         msg(MSG_PROGRESS, "analyze_disk_size (1139): At cyl %d\r", cyl);
+         msg(MSG_PROGRESS, "At cyl %d\r", cyl);
 
       rc = drive_step(drive_params->step_speed, 1,
            DRIVE_STEP_UPDATE_CYL, DRIVE_STEP_RET_ERR);
